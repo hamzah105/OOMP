@@ -1,4 +1,4 @@
-"""Minimal local diagnostics for the Stage 1 package."""
+"""Local package and event-storage diagnostics."""
 
 from __future__ import annotations
 
@@ -52,16 +52,67 @@ def doctor() -> int:
     return 0 if healthy else 1
 
 
+def storage_init(database_path: str | None) -> int:
+    """Create or migrate the local event database on explicit request."""
+    from .storage import SQLiteEventStore
+    from .storage.errors import StorageError
+
+    try:
+        store = SQLiteEventStore(database_path)
+        version = store.initialize()
+    except (StorageError, OSError, ValueError) as error:
+        print(f"Storage initialization failed ({type(error).__name__}).", file=sys.stderr)
+        return 1
+    print(f"Database: {store.path}")
+    print(f"Schema version: {version}")
+    print("Storage readiness: OK")
+    return 0
+
+
+def storage_status(database_path: str | None) -> int:
+    """Inspect an existing database without creating files or directories."""
+    from .storage import SQLiteEventStore
+    from .storage.errors import StorageError
+
+    try:
+        status = SQLiteEventStore(database_path).status()
+    except (StorageError, OSError, ValueError) as error:
+        print(f"Storage status failed ({type(error).__name__}).", file=sys.stderr)
+        return 1
+    print(f"Database: {status.path}")
+    print(f"Exists: {'yes' if status.exists else 'no'}")
+    print(f"Accessible: {'yes' if status.accessible else 'no'}")
+    print(f"Schema version: {status.schema_version if status.schema_version is not None else 'unknown'}")
+    print(f"Journal mode: {status.journal_mode if status.journal_mode else 'unknown'}")
+    print(f"Storage readiness: {'OK' if status.ready else 'NOT READY'}")
+    if status.message:
+        print(f"Status: {status.message}")
+    return 0 if status.ready else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="oomp",
-        description="OOMP Stage 1 contract and environment tools",
+        description="OOMP contract, environment, and local storage tools",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command")
     subparsers.add_parser("doctor", help="check installed package and runtime readiness")
+    storage_parser = subparsers.add_parser("storage", help="inspect or initialize the local event database")
+    storage_commands = storage_parser.add_subparsers(dest="storage_command")
+    init_parser = storage_commands.add_parser("init", help="initialize or migrate the event database")
+    init_parser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
+    status_parser = storage_commands.add_parser("status", help="inspect database readiness without creating it")
+    status_parser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
     args = parser.parse_args(argv)
     if args.command == "doctor":
         return doctor()
+    if args.command == "storage":
+        if args.storage_command == "init":
+            return storage_init(args.db)
+        if args.storage_command == "status":
+            return storage_status(args.db)
+        storage_parser.print_help()
+        return 0
     parser.print_help()
     return 0

@@ -48,3 +48,6 @@ junit.xml
 .DS_Store
 Thumbs.db
 
+
+# Workspace-local pytest temporary directories
+.pytest-*/

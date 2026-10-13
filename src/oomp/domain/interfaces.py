@@ -5,12 +5,17 @@ from __future__ import annotations
 from typing import Protocol, Sequence
 
 from .models import AuthorizedScope, MemoryEdge, MemoryEvent, MemoryNode
+from .events import EventCursor, EventPage
 from oomp.retrieval.contracts import RetrievalRequest, RetrievalResponse
 
 
 class EventStore(Protocol):
     def append(self, scope: AuthorizedScope, event: MemoryEvent) -> MemoryEvent: ...
     def get(self, scope: AuthorizedScope, event_id: str) -> MemoryEvent | None: ...
+    def list_events(
+        self, scope: AuthorizedScope, *, limit: int = 100, after: EventCursor | None = None
+    ) -> EventPage: ...
+    def count_events(self, scope: AuthorizedScope) -> int: ...
 
 
 class MemoryStore(Protocol):

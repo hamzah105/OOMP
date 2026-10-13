@@ -1,10 +1,10 @@
 # Security model
 
-Stage 1 validates data shape and scope identifiers. It implements no authenticator, authorizer, persistence, network listener, approval service or encrypted storage. These requirements constrain future implementations.
+Stage 1 validates data shape and scope identifiers. Stage 2 implements scoped SQLite event persistence, while no network authenticator, authorizer, listener, approval service or encrypted storage is implemented. The following contracts distinguish current storage enforcement from future service policy.
 
 ## Local-first operation
 
-CLI diagnostics run locally and send no memory data to a provider. No services bind ports and no credentials are required. Future defaults should keep durable data and embeddings local. An externally configured extraction/embedding provider must be an explicit choice, with documented data flow and retention. File permissions and database encryption must be designed for the deployment; they are not present-day capabilities.
+CLI diagnostics run locally and send no memory data to a provider. No services bind ports and no credentials are required. The SQLite default is a local user-data directory. Future embeddings should also remain local by default. An externally configured extraction/embedding provider must be an explicit choice, with documented data flow and retention. File permissions and database encryption must be designed for the deployment; they are not present-day capabilities.
 
 ## Tenant, namespace and principal
 
@@ -32,5 +32,13 @@ Do not put credentials or secret configuration in event metadata by default. Met
 
 MCP transport credentials and the request's authenticated principal must be checked independently of requested memory scope. Streamable HTTP requires correct authentication/audience mapping, authorization, origin validation and local-first bind defaults. Stdio trusts the invoking process/environment and still needs explicit scope policy. Transport session identifiers are not durable memory keys or authorization tokens. Only the configured service may exercise storage authority; model proposals remain inputs to validation and policy.
 
-Security tests for actual multi-tenant persistence, index leakage, erasure propagation and transport credentials belong in later stages. Stage 1 tests individual scope values and boundary contracts only.
+Stage 2 tests tenant/namespace event isolation, mismatched scopes/cursors, duplicate identity concurrency and safe storage diagnostics. Graph/vector index leakage, privileged erasure propagation and transport credentials remain later-stage tests.
 
+
+## Implemented Stage 2 enforcement
+
+Each event operation requires a trusted-service AuthorizedScope and validates its identifiers again. Append rejects an event from a different tenant or namespace before database access; get/list/count include both partition columns in SQL. RequestedScope is rejected as authority. An event source reference or metadata principal cannot elevate access. Cursor scope is checked too; cursors are not capabilities.
+
+Scoped primary/idempotency uniqueness and explicit write transactions prevent retry duplicates. The ordinary API exposes no update/delete/replace operation, and triggers protect ordinary SQL event changes. Filesystem/SQL administrators still control the underlying plaintext database. Caller authentication is intentionally outside this local adapter.
+
+Database paths and initialization are trusted local administrative settings, not future remotely supplied memory scopes. Read/status never creates a missing database; diagnostics expose no event contents or global tenant counts. Corrupt stored evidence produces sanitized failures. [.gitignore](../.gitignore) excludes SQLite files/sidecars, local environments and temporary artifacts. [Backup, concurrency and future privacy erasure](storage.md) describe the remaining deployment requirements.

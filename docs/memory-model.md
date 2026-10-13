@@ -1,6 +1,6 @@
 # Memory model
 
-All contracts use Pydantic v2, reject extra fields, validate defaults and prohibit field reassignment. Evidence collections are tuples. Event and retrieval metadata are recursively immutable snapshots and serialize as ordinary JSON objects/arrays. These are validated values, not a database, authenticator or graph engine.
+All contracts use Pydantic v2, reject extra fields, validate defaults and prohibit field reassignment. Evidence collections are tuples. Event and retrieval metadata are recursively immutable snapshots and serialize as ordinary JSON objects/arrays. These domain values remain provider independent. Stage 2 persists MemoryEvent through a separate SQLite adapter; authentication and graph engines remain unimplemented.
 
 ## Identity and scope
 
@@ -23,7 +23,7 @@ Source references describe external origin. OOMP `event_id` describes an interna
 
 Required: `event_id`, `tenant_id`, `namespace`, `event_type`, `source_type`, `content`, `source_reference`, `occurred_at`, `ingested_at`. Optional: `idempotency_key` (default null), `metadata` (default empty object).
 
-Content must be nonblank and at most 1,000,000 characters; its original spacing is preserved. Metadata must be a JSON object with string keys and JSON-compatible nested values, including null. Explicit metadata null, executable objects and NaN/infinity are rejected. Input containers are copied into immutable snapshots; mutating the caller's input cannot revise source evidence. This value-level protection is distinct from future append-only storage and erasure policy.
+Content must be nonblank and at most 1,000,000 characters; its original spacing is preserved. Metadata must be a JSON object with string keys and JSON-compatible nested values, including null. Explicit metadata null, executable objects and NaN/infinity are rejected. Input containers are copied into immutable snapshots; mutating the caller's input cannot revise source evidence. This value-level protection is supplemented by Stage 2 append-only storage and UPDATE/DELETE triggers. Privileged erasure remains future work.
 
 | EventType | Required SourceType |
 | --- | --- |
@@ -36,7 +36,7 @@ Content must be nonblank and at most 1,000,000 characters; its original spacing 
 
 `SourceType` also includes `system`. Corrections and feedback preserve who supplied them; they do not automatically become verified user truth. Assistant assertions remain generated content even when a later memory cites them. No trust score is invented.
 
-Occurrence records when the source event happened; ingestion records when OOMP received it. Both are required and independent. Stage 1 imposes no ordering between them, allowing imported data and explicitly represented clock skew. Future ingestion policy must decide which clock anomalies to reject or flag. Idempotency collision checking is a future storage responsibility within tenant and namespace.
+Occurrence records when the source event happened; ingestion records when OOMP received it. Both are required and independent. Stage 1 imposes no ordering between them, allowing imported data and explicitly represented clock skew. Future ingestion policy must decide which clock anomalies to reject or flag. Stage 2 enforces idempotency within tenant and namespace and preserves the original ingestion time on an equivalent retry. See the storage guide for the exact logical fingerprint.
 
 ## MemoryNode
 
@@ -113,4 +113,10 @@ Both events remain unchanged. A future January-as-of lookup should consider the 
 
 ## Protocol boundaries
 
-EventStore: scoped `append`/`get`; MemoryStore: scoped `put`/`get`; GraphStore: scoped `put_edge`/`edges_for`; EmbeddingProvider: `embed` returning numeric vectors; MemoryExtractor: scoped `extract` returning nodes; MemoryRetriever: scoped `retrieve` returning the response schema. The embedding provider performs a transformation, not persistent storage, and receives no implicit authorization authority. These are Python protocols, with no runtime adapter or dummy implementation.
+EventStore: scoped `append`/`get`/`list_events`/`count_events`; MemoryStore: scoped `put`/`get`; GraphStore: scoped `put_edge`/`edges_for`; EmbeddingProvider: `embed` returning numeric vectors; MemoryExtractor: scoped `extract` returning nodes; MemoryRetriever: scoped `retrieve` returning the response schema. The embedding provider performs a transformation, not persistent storage, and receives no implicit authorization authority. These are Python protocols; EventStore has a real SQLite adapter, while the other protocols remain implementation boundaries.
+
+## Stage 2 event pages and persisted evidence
+
+`oomp.domain.events.EventCursor` extends requested scope with occurrence time, ingestion time and event ID. It describes a keyset position and confers no access rights. `EventPage` contains a tuple of original MemoryEvent values and an optional next cursor. The adapter checks cursor tenant and namespace against AuthorizedScope and reads at most a bounded page.
+
+Persisted event fields use the exact Stage 1 contract, including source_type, SourceReference and deeply immutable metadata after reconstruction. There is no duplicate storage-domain event model. All historical values survive reopen, and equivalent retry ingestion preserves the first persisted ID/time. [Exact schema, ordering and retry policy](storage.md).
