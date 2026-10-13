@@ -1,0 +1,50 @@
+# Configuration and secrets
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+# Environments, bytecode, caches and builds
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+build/
+dist/
+*.egg
+# Local memory, indexes, logs and test artifacts
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+data/
+indexes/
+embeddings/
+*.faiss
+*.hnsw
+*.ann
+logs/
+*.log
+.tmp/
+tmp/
+.test-artifacts/
+junit.xml
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
