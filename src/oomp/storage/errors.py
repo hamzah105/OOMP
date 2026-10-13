@@ -43,3 +43,36 @@ class IdempotencyConflictError(StorageError):
 
 class ScopeMismatchError(StorageError):
     """A supplied event or cursor does not match the authorized scope."""
+
+class MemoryConflictError(StorageError):
+    """A canonical key or memory ID names incompatible derived content."""
+
+
+class SourceEventMissingError(StorageError):
+    """A required source event is absent from the authorized partition."""
+
+
+class ProvenanceMismatchError(StorageError):
+    """Memory evidence does not match the original scoped source event."""
+
+
+class AliasConflictError(StorageError):
+    """Explicit names would merge two existing distinct entity identities."""
+
+
+class EntityEvidenceError(StorageError):
+    """An entity mention or alias lacks literal source-event evidence."""
+
+
+class StoredMemoryCorruptionError(StorageCorruptionError):
+    """A stored memory or entity fails validation."""
+
+
+
+class SchemaUpgradeRequiredError(StorageError):
+    """Canonical memory storage requires explicit schema version 2 initialization."""
+
+
+
+class MemoryNotFoundError(StorageError):
+    """A requested canonical memory is absent from the authorized partition."""

@@ -2,11 +2,11 @@
 
 OOMP is an independent, provider-neutral research project for long-term AI memory. Its intended architecture transforms raw experience into typed, canonical, conflict-aware memory objects, organizes them in a multi-view temporal graph, and returns bounded evidence through hybrid lexical, vector, temporal and relational retrieval.
 
-Potential uses include persistent project context, changing user preferences, documented decisions, and evidence-backed agent memory across compatible applications. These are future use cases; Stage 1 supplies the contracts and Stage 2 adds durable source-event history.
+Potential uses include persistent project context, changing user preferences, documented decisions, and evidence-backed agent memory across compatible applications. Stage 1 supplies the contracts, Stage 2 adds durable source-event history, and Stage 3 derives conservative, attributed canonical memories.
 
 ## Current scope
 
-Stage 1 is implemented and acceptance-verified (79 tests passed). It includes validated domain and retrieval schemas, six replaceable component protocols, an offline diagnostic CLI, unit tests, and architectural, security and research documentation. Stage 2 adds a SQLite event store, scoped idempotent ingestion, chronological pages and storage diagnostics (acceptance verified: 120 total tests passed, including all original 79). There is no extraction model, graph engine, search ranking, background worker, MCP server, TRACE adapter, inference, or dashboard. A token budget limits selected evidence; it does not enlarge an LLM's native context window.
+Stage 1 is implemented and acceptance-verified (79 tests passed). It includes validated domain and retrieval schemas, six replaceable component protocols, an offline diagnostic CLI, unit tests, and architectural, security and research documentation. Stage 2 adds a SQLite event store, scoped idempotent ingestion, chronological pages and storage diagnostics (acceptance verified: 120 total tests passed, including all original 79). Stage 3 acceptance passed: **192 tests**, including the original 120. It adds deterministic offline extraction, schema version 2 canonical-memory/entity persistence, scoped evidence deduplication, and synchronous atomic processing. Its validation results are recorded in [Stage 3 validation](docs/stage3-validation.md). There is no implemented local model adapter, graph engine, search ranking, background worker, MCP server, TRACE adapter, inference, or dashboard. A token budget limits selected evidence; it does not enlarge an LLM's native context window.
 
 The Python import is `oomp`; local distribution metadata uses `oomp-memory` version `0.1.0`. This does not assert ownership or reservation of a PyPI name. OOMP does not import or modify TRACE.AI. Its eventual adapter belongs at an external integration boundary.
 
@@ -36,7 +36,7 @@ Activation is optional. If PowerShell activation is restricted, or `python` reso
 .\.venv\Scripts\python.exe -m oomp --help
 ```
 
-Installation may download the small Python dependencies. Once installed, commands and tests require no network service, external database server, model, GPU, MCP host, or cloud credentials. Stage 2 tests create temporary SQLite files. Storage configuration is optional; see `sample.env` and the storage guide. OOMP does not auto-load environment files.
+Installation may download the small Python dependencies. Once installed, commands and tests require no network service, external database server, model, GPU, MCP host, or cloud credentials. Storage and extraction tests create temporary SQLite files. Storage configuration is optional; see `sample.env` and the storage guide. OOMP does not auto-load environment files.
 
 `doctor` checks this foundation's Python compatibility, installed Pydantic dependency, package imports, and local readiness. Its exit code is nonzero when required checks fail. Use `storage status` separately to inspect Stage 2 storage. Doctor does not create or require a database and does not report future retrieval/MCP services as operational.
 
@@ -53,20 +53,28 @@ src/oomp/
         models.py
         interfaces.py
         events.py
+        memories.py
     retrieval/
         __init__.py
         contracts.py
+    ingestion/
+        contracts.py
+        extraction.py
+        canonicalization.py
+        pipeline.py
     storage/
         __init__.py
         config.py
         errors.py
         migrations.py
         sqlite.py
+        memory_store.py
+        entity_store.py
 tests/
 docs/
 ```
 
-The domain owns identity, provenance, scope and temporal validation. Retrieval owns typed requests, evidence and graph-path metadata. Protocols define service boundaries; Stage 2 implements EventStore with a SQLite adapter. Other components remain contracts. CLI code depends on these contracts, while the domain has no provider SDK or application dependency.
+The domain owns identity, provenance, scope and temporal validation. Retrieval owns typed requests, evidence and graph-path metadata. Protocols define service boundaries; Stage 2 implements EventStore with a SQLite adapter. Stage 3 implements MemoryStore and deterministic MemoryExtractor, with provider-neutral candidate/entity contracts and separate SQLite persistence. Graph, embedding and retrieval components remain contracts. CLI code depends on these contracts, while the domain has no provider SDK or application dependency.
 
 ## Dependencies
 
@@ -88,7 +96,10 @@ Tests cover event/source consistency, provenance, identity validation, memory an
 
 ## Documentation and roadmap
 
-- [SQLite event storage and exact retry policy](docs/storage.md)
+- [SQLite events, canonical memories, migration and retry policy](docs/storage.md)
+- [Deterministic extraction, canonical identity and entity aliases](docs/extraction.md)
+- [Stage 3 validation](docs/stage3-validation.md)
+- [Complete Stage 3 report](docs/stage-3-report.md)
 - [Architecture](docs/architecture.md)
 - [Memory model and temporal example](docs/memory-model.md)
 - [Security and tenancy](docs/security-model.md)
@@ -125,3 +136,17 @@ Construct `SQLiteEventStore(path)`, explicitly `initialize()`, then use an autho
 ```
 
 Without `--db`, `OOMP_DB_PATH` overrides the platform user-data default. Missing `storage status` returns nonzero and creates no database. Storage diagnostics expose no event content. The example uses synthetic data and can be rerun. This is reliable event history, not intelligent associative recall.
+
+## Stage 3 canonical memory extraction
+
+The default pipeline reads one scoped source event, validates conservative candidates and their exact evidence spans, computes scoped canonical identities, resolves explicit project names, and commits memories, evidence and entity links together. Equivalent memories reuse the first ID and accumulate source events; reprocessing the same event adds no duplicate rows. Claims remain attributed and unverified. No model, internet connection or GPU is needed.
+
+~~~powershell
+.\.venv\Scripts\python.exe examples\stage3_memory_extraction.py --db .\data\stage3-synthetic.sqlite3
+.\.venv\Scripts\oomp.exe storage status --db .\data\stage3-synthetic.sqlite3
+.\.venv\Scripts\oomp.exe memory list --tenant tenant-stage3-example --namespace synthetic --db .\data\stage3-synthetic.sqlite3
+~~~
+
+The example uses synthetic records and verifies persisted results after reopening. Use its printed scope and event IDs when trying `memory extract --tenant TENANT --namespace NAMESPACE --event-id EVENT_ID --db PATH`. Memory listing omits canonical content unless the trusted local operator supplies `--show-content`. Tenant strings do not authenticate a caller: these local administrative commands rely on machine/filesystem access. Memory commands require an explicitly initialized version 2 database; use `storage init` to upgrade a genuine version 1 database without replacing its events.
+
+Stage 3 coverage is deliberately narrow. Exact/conservatively normalized identity is implemented; unrestricted paraphrase equivalence, independent fact verification, temporal supersession, semantic retrieval and full entity linking are not.

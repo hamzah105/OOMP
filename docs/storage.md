@@ -10,9 +10,9 @@ Only explicit `initialize()` creates parent directories and a new database. Appe
 
 `sample.env` is illustrative. OOMP reads process environment variables and does not automatically load `.env` files. CLI diagnostics show path, existence, accessibility, schema version, journal mode and readiness, with no event contents or global event counts. A missing/unready database returns a nonzero status. Readiness checks schema and accessibility, not every stored row or fingerprint. `doctor` remains a package diagnostic and neither initializes nor requires storage.
 
-## Schema version 1
+## Original schema version 1
 
-There is one application table, `events`, and no canonical-memory or graph tables:
+Version 1 has one application table, `events`. Version 2 retains it unchanged and adds the Stage 3 tables documented below:
 
 | Column | Meaning |
 | --- | --- |
@@ -30,9 +30,9 @@ Database timestamps use six fractional digits and UTC `Z` so text ordering exact
 
 ## Migration policy
 
-`PRAGMA user_version` is 1. Version 0 is initialized only if the database contains no unrelated application objects. Schema identity/structure is checked before use; existing foreign or unsupported future schemas are rejected without resets or dropped tables. Repeated initialization preserves events.
+The current `PRAGMA user_version` is 2. Version 0 is initialized only if the database contains no unrelated application objects. Schema identity/structure is checked before use; existing foreign or unsupported future schemas are rejected without resets or dropped tables. Repeated initialization preserves events.
 
-Migrations are a sequential registry of trusted SQL statements. Statements and the version update execute in an explicit transaction; failures roll back schema/data/version changes. `executescript()` is deliberately avoided because Python 3.11 commits a pending transaction before running it. The mechanism supports future incremental migrations, but only version 1 exists now. [Python sqlite3 transaction control](https://docs.python.org/3.11/library/sqlite3.html#transaction-control).
+Migrations are a sequential registry of trusted SQL statements. Statements and the version update execute in an explicit transaction; failures roll back schema/data/version changes. `executescript()` is deliberately avoided because Python 3.11 commits a pending transaction before running it. The mechanism supports future incremental migrations, and Stage 3 registers additive migration 2 after the unchanged migration 1. [Python sqlite3 transaction control](https://docs.python.org/3.11/library/sqlite3.html#transaction-control).
 
 UPDATE and DELETE triggers protect ordinary event immutability. A future explicitly authorized migration/erasure workflow may need to replace those triggers transactionally. No ordinary update, delete, replace or privileged erasure API is implemented. Database/filesystem administrators can bypass logical protections; these are not an authenticity guarantee against administrators.
 
@@ -87,3 +87,33 @@ $env:OOMP_DB_PATH = Join-Path $PWD 'data\events.sqlite3'
 ```
 
 The first status intentionally reports missing/unready without creating a database. The example uses synthetic records and a dedicated demonstration scope/database; it is safe to rerun. Tests use temporary file-backed databases, never the real user-data directory. Stage 2 acceptance passed: **120 tests in 22.18s**, including all original 79 cases. See [the actual validation record](stage2-validation.md) and [completion report](stage-2-report.md).
+
+## Current schema version 2
+
+| Table | Role and constraints |
+| --- | --- |
+| memories | Full MemoryNode scalar fields, tags/metadata JSON and stable-payload fingerprint; scoped ID primary key and scoped canonical-key uniqueness |
+| memory_sources | Many-to-many memory/event evidence, insertion ordinal, optional exact source-span JSON and extraction method; scoped foreign keys to both records |
+| entities | Scoped stable entity ID, type, canonical/normalized name and created_at; scoped type/name uniqueness |
+| entity_aliases | Scoped type/normalized-alias uniqueness, display name, entity ID and originating event ID; scoped foreign keys |
+| memory_entities | Unique scoped memory/entity pair, with scoped foreign keys to both records |
+
+Chronological memory, reverse source and reverse entity indexes serve bounded lookups. These are entity associations, without graph-edge or vector tables. Foreign keys are enabled on each connection before transactions; composite references include both tenant and namespace. [SQLite foreign-key requirements](https://www.sqlite.org/foreignkeys.html).
+
+Fresh initialize runs migrations 1 and 2 in one explicit transaction. A genuine version 1 database is structurally validated before upgrade; its event data, fingerprints, indexes and immutability triggers are preserved. Unsupported future/foreign/damaged schemas are rejected. A failed migration 2 leaves version 1 and its events intact. Repeated initialize is safe. Read-only status reports a valid version 1 database as needing an explicit upgrade; memory operations never initialize or migrate implicitly.
+
+## Memory and entity APIs
+
+`SQLiteMemoryStore` implements `put(scope,node)`, `get(scope,id)`, `find_by_canonical_key(scope,key)`, `list_memories(scope,limit=100,after=None)` and `attach_evidence(scope,memory_id,event_id)`. `upsert` returns the retained memory identity, `count_memories` is scoped, and `list_entities` returns linked entity records. Nodes are revalidated, including actual source existence and exact SourceReference correspondence. An equivalent insert unions evidence; conflicting canonical key/content or competing ID/key identities fail without overwriting.
+
+Memory pages use `(created_at,memory_id)` ascending keyset order and strict sizes 1-100, fetching limit+1 nodes. Cursors must match AuthorizedScope. Pages are live views, not scan-wide snapshots. Each reconstructed memory is bounded to 1000 evidence links. Per-event batches contain at most 32 candidates; entity alias sets and per-memory entity associations are bounded to 64. Exceeding a bound raises an error and rolls back rather than dropping evidence.
+
+`SQLiteEntityStore.resolve(scope,mention)`, `get` and `count_entities` require authorized scope. Explicit alias evidence must come from an actual same-scope event. Resolution matches normalized names and aliases within an entity type. If supplied names already identify different entities, the operation rejects the ambiguous merge. No general entity merge/deletion API exists.
+
+## Per-event atomic processing
+
+`apply_batch(scope,event_id,writes)` uses one connection and BEGIN IMMEDIATE for all derived rows: entity resolution, memory insert/reuse, evidence and entity links. SQLite allows a single writer and BEGIN IMMEDIATE may fail when another writer holds the database; the configured busy timeout bounds waiting. Any failure rolls back the batch, and the independent immutable event remains stored. [SQLite transaction semantics](https://www.sqlite.org/lang_transaction.html).
+
+Canonical fingerprints compare stable content/type/key/status/validity/confidence/tags/metadata, excluding record times and accumulated proof. Evidence attachment preserves created_at and advances updated_at only for a new link. Reprocessing the same event creates no duplicate canonical memory, source pair or entity pair. A new event expressing the same supported claim adds evidence to the first memory ID. No inferred supersession, deletion or unbounded scan API is supplied.
+
+Stage 3 memory text, metadata and entity names are plaintext, just like source events. Constraints and fingerprints protect API consistency, not physical database administrators or tamper-proof authenticity.

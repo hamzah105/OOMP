@@ -42,3 +42,17 @@ Each event operation requires a trusted-service AuthorizedScope and validates it
 Scoped primary/idempotency uniqueness and explicit write transactions prevent retry duplicates. The ordinary API exposes no update/delete/replace operation, and triggers protect ordinary SQL event changes. Filesystem/SQL administrators still control the underlying plaintext database. Caller authentication is intentionally outside this local adapter.
 
 Database paths and initialization are trusted local administrative settings, not future remotely supplied memory scopes. Read/status never creates a missing database; diagnostics expose no event contents or global tenant counts. Corrupt stored evidence produces sanitized failures. [.gitignore](../.gitignore) excludes SQLite files/sidecars, local environments and temporary artifacts. [Backup, concurrency and future privacy erasure](storage.md) describe the remaining deployment requirements.
+
+## Stage 3 extraction trust boundary
+
+Source content is untrusted data. The deterministic pipeline executes no text, follows no URLs and makes no network requests. Only supported user statements and eligible document claims enter default extraction; assistant/tool/system claims are excluded. User-profile candidates require user evidence. Every proposal is revalidated against an existing same-scope event and exact Unicode span, then compared with supported deterministic transformations before writes. Unknown types, invented statements, fabricated provenance, incorrect spans and scope mismatches fail closed.
+
+Claims retain attribution and `verified: false`; the store rejects unsupported verified metadata and inconsistent attribution. This is provenance accounting, not identity verification or a claim that a statement is objectively true. Corrections remain attributed events and do not automatically retract earlier memories.
+
+The extractor skips whole events containing recognizable passwords, API keys, secret/token assignments, bearer credentials or private-key headers. This is a limited heuristic, not a comprehensive secret scanner. Original events remain stored in Stage 2 and may still contain sensitive data. Trusted direct MemoryStore callers remain responsible for their own content policy. Skipped extraction does not imply deletion, encryption or safe publication of the original event.
+
+Injected extractors have proposal authority only. No implemented local model adapter, endpoint or configuration exists; a future adapter must be explicit opt-in, bounded, validated and subject to the same source grounding. No provider writes directly to persistence. The default operation has no internet, cloud, Ollama, GPU or arbitrary tool dependency.
+
+All reads/writes require AuthorizedScope and include tenant and namespace in lookups and foreign keys. Canonical-memory and entity identities are scoped; there is no cross-tenant cache or identity reuse. Scope construction is a trusted in-process boundary, not an authentication mechanism. Local CLI commands use a local administrative principal and rely on machine/filesystem access. A tenant argument does not authenticate an internet user.
+
+Memory list omits canonical content by default; `--show-content` is a deliberate trusted-debugging option. IDs, types and source IDs remain metadata and can themselves be sensitive. Database content is plaintext. No encryption, secure erasure, public API authentication, model safety certification or administrator-resistant authenticity is claimed.

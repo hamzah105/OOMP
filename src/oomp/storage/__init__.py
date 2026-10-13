@@ -5,6 +5,14 @@ from .errors import (
     DatabaseUninitializedError,
     ForeignDatabaseError,
     IdempotencyConflictError,
+    AliasConflictError,
+    EntityEvidenceError,
+    MemoryConflictError,
+    MemoryNotFoundError,
+    ProvenanceMismatchError,
+    SchemaUpgradeRequiredError,
+    SourceEventMissingError,
+    StoredMemoryCorruptionError,
     ScopeMismatchError,
     StorageBusyError,
     StorageCorruptionError,
@@ -14,10 +22,16 @@ from .errors import (
     UnsupportedSchemaVersionError,
 )
 from .sqlite import SQLiteEventStore, StorageStatus
+from .memory_store import SQLiteMemoryStore
+from .entity_store import SQLiteEntityStore
 
 __all__ = [
     "DatabaseMissingError", "DatabaseUninitializedError", "ForeignDatabaseError",
     "IdempotencyConflictError", "ScopeMismatchError", "SQLiteEventStore",
+    "SQLiteMemoryStore", "SQLiteEntityStore", "MemoryConflictError",
+    "MemoryNotFoundError", "ProvenanceMismatchError", "SourceEventMissingError",
+    "AliasConflictError", "EntityEvidenceError", "SchemaUpgradeRequiredError",
+    "StoredMemoryCorruptionError",
     "StorageBusyError", "StorageCorruptionError", "StorageError", "StorageStatus",
     "StorageUnavailableError", "StoredEventCorruptionError", "UnsupportedSchemaVersionError",
 ]

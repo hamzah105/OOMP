@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib
 import importlib.metadata
+import json
 import re
 import sys
 
@@ -90,6 +91,62 @@ def storage_status(database_path: str | None) -> int:
     return 0 if status.ready else 1
 
 
+def memory_extract(database_path: str | None, tenant: str, namespace: str, event_id: str) -> int:
+    """Process one stored event using trusted local-machine scope authority."""
+    from .domain.models import AuthorizedScope
+    from .ingestion import ExtractionPipeline, ProcessingError
+    from .storage.errors import SchemaUpgradeRequiredError, StorageError
+
+    try:
+        scope = AuthorizedScope(
+            tenant_id=tenant, namespace=namespace, principal_id="local-cli"
+        )
+        result = ExtractionPipeline(database_path).process_event(scope, event_id)
+    except (StorageError, ProcessingError, OSError, ValueError, TypeError) as error:
+        if isinstance(error, SchemaUpgradeRequiredError):
+            print("Run oomp storage init --db <path> to upgrade the database.", file=sys.stderr)
+        print(f"Memory extraction failed ({type(error).__name__}).", file=sys.stderr)
+        return 1
+    print(result.model_dump_json())
+    return 0
+
+
+def memory_list(
+    database_path: str | None, tenant: str, namespace: str, *,
+    limit: int, show_content: bool,
+) -> int:
+    """List scoped memory identifiers and provenance; content requires opt-in."""
+    from .domain.models import AuthorizedScope
+    from .storage.errors import SchemaUpgradeRequiredError, StorageError
+    from .storage.memory_store import SQLiteMemoryStore
+
+    if not 1 <= limit <= 100:
+        print("Memory list limit must be from 1 to 100.", file=sys.stderr)
+        return 1
+    try:
+        scope = AuthorizedScope(
+            tenant_id=tenant, namespace=namespace, principal_id="local-cli"
+        )
+        page = SQLiteMemoryStore(database_path).list_memories(scope, limit=limit)
+    except (StorageError, OSError, ValueError, TypeError) as error:
+        if isinstance(error, SchemaUpgradeRequiredError):
+            print("Run oomp storage init --db <path> to upgrade the database.", file=sys.stderr)
+        print(f"Memory listing failed ({type(error).__name__}).", file=sys.stderr)
+        return 1
+    for memory in page.memories:
+        record = {
+            "memory_id": memory.memory_id,
+            "memory_type": memory.memory_type.value,
+            "source_event_ids": list(memory.source_event_ids),
+            "evidence_count": len(memory.source_event_ids),
+        }
+        if show_content:
+            record["canonical_content"] = memory.canonical_content
+        print(json.dumps(record, ensure_ascii=False, separators=(",", ":")))
+    if page.next_cursor is not None:
+        print(f"More memories available after: {page.next_cursor.memory_id}")
+    return 0
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="oomp",
@@ -104,6 +161,19 @@ def main(argv: list[str] | None = None) -> int:
     init_parser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
     status_parser = storage_commands.add_parser("status", help="inspect database readiness without creating it")
     status_parser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
+    memory_parser = subparsers.add_parser("memory", help="extract and inspect local canonical memories")
+    memory_commands = memory_parser.add_subparsers(dest="memory_command")
+    extract_parser = memory_commands.add_parser("extract", help="extract memories from one stored event")
+    extract_parser.add_argument("--tenant", required=True)
+    extract_parser.add_argument("--namespace", required=True)
+    extract_parser.add_argument("--event-id", required=True)
+    extract_parser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
+    list_parser = memory_commands.add_parser("list", help="list memory IDs and evidence in one scope")
+    list_parser.add_argument("--tenant", required=True)
+    list_parser.add_argument("--namespace", required=True)
+    list_parser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
+    list_parser.add_argument("--limit", type=int, default=100, metavar="N")
+    list_parser.add_argument("--show-content", action="store_true", help="print canonical content for trusted local inspection")
     args = parser.parse_args(argv)
     if args.command == "doctor":
         return doctor()
@@ -113,6 +183,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.storage_command == "status":
             return storage_status(args.db)
         storage_parser.print_help()
+        return 0
+    if args.command == "memory":
+        if args.memory_command == "extract":
+            return memory_extract(args.db, args.tenant, args.namespace, args.event_id)
+        if args.memory_command == "list":
+            return memory_list(
+                args.db, args.tenant, args.namespace,
+                limit=args.limit, show_content=args.show_content,
+            )
+        memory_parser.print_help()
         return 0
     parser.print_help()
     return 0

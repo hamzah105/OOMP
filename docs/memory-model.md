@@ -1,6 +1,6 @@
 # Memory model
 
-All contracts use Pydantic v2, reject extra fields, validate defaults and prohibit field reassignment. Evidence collections are tuples. Event and retrieval metadata are recursively immutable snapshots and serialize as ordinary JSON objects/arrays. These domain values remain provider independent. Stage 2 persists MemoryEvent through a separate SQLite adapter; authentication and graph engines remain unimplemented.
+All contracts use Pydantic v2, reject extra fields, validate defaults and prohibit field reassignment. Evidence collections are tuples. Event, memory and retrieval metadata are recursively immutable snapshots and serialize as ordinary JSON objects/arrays. These domain values remain provider independent. Stage 2 persists MemoryEvent through a separate SQLite adapter; Stage 3 persists canonical MemoryNode values and conservative entity associations; authentication and graph engines remain unimplemented.
 
 ## Identity and scope
 
@@ -11,7 +11,7 @@ All contracts use Pydantic v2, reject extra fields, validate defaults and prohib
 | RequestedScope | `tenant_id`, `namespace` | Client's requested partition; untrusted authorization intent |
 | AuthorizedScope | Same scope plus required `principal_id` | Trusted service supplies it after authentication and policy; construction alone proves neither |
 
-A namespace belongs within a tenant. A principal is an actor, not a substitute for the tenant. Protocol methods carry explicit authorized scope. Cross-tenant/namespace linkage prevention, existence checks and access decisions require future service/storage implementations that can inspect both records; identifier validation alone cannot establish those facts.
+A namespace belongs within a tenant. A principal is an actor, not a substitute for the tenant. Protocol methods carry explicit authorized scope. Stage 3 storage verifies existence and scope of every source/entity link; authentication and access grants require a trusted service; identifier validation alone cannot establish those facts.
 
 ## SourceReference
 
@@ -40,13 +40,13 @@ Occurrence records when the source event happened; ingestion records when OOMP r
 
 ## MemoryNode
 
-Required: `memory_id`, `tenant_id`, `namespace`, `memory_type`, `canonical_content`, `canonical_key`, `source_event_ids`, `provenance`, `created_at`, `updated_at`. Optional: `confidence`, `valid_from`, `valid_until` (all default null), `status` (default active), `tags` (default empty tuple).
+Required: `memory_id`, `tenant_id`, `namespace`, `memory_type`, `canonical_content`, `canonical_key`, `source_event_ids`, `provenance`, `created_at`, `updated_at`. Optional: `confidence`, `valid_from`, `valid_until` (all default null), `status` (default active), `tags` (default empty tuple), `metadata` (default empty deeply immutable JSON object).
 
 `canonical_content` is nonblank, at most 1,000,000 characters. `canonical_key` is nonblank, at most 512 characters, with source text preserved. `source_event_ids` and `provenance` must each contain at least one item. A confidence, when measured, is a finite number in `[0,1]`; absent confidence remains null. It is not a retrieval score or proof of truth.
 
-`MemoryType`: `episodic`, `semantic`, `profile`, `procedural`, `project_state`, `resource`, `decision`, `topic_summary`. All use the same identity/provenance/temporal envelope; type-specific payloads can be refined when extraction exists.
+`MemoryType`: `episodic`, `semantic`, `profile`, `procedural`, `project_state`, `resource`, `decision`, `topic_summary`. All use the same identity/provenance/temporal envelope; Stage 3 deterministic extraction produces profile, project_state, semantic, decision and episodic values for documented constructions. The other types remain valid domain/store values without default extraction rules.
 
-A node retains its persistent identity across graph views. Topic membership uses relationships, avoiding duplicate facts just because several projects need them. Canonical keys provide a future deduplication hint; this stage does not establish uniqueness, merge facts or assign identities automatically.
+A node retains its persistent identity across graph views. Topic membership uses relationships, avoiding duplicate facts just because several projects need them. Stage 3 assigns a versioned scoped hash of conservative normalized content, memory type and attribution and enforces scoped canonical-key uniqueness. It merges equivalent records' evidence, preserving the first memory ID; conflicting content under one key is rejected.
 
 `MemoryStatus`: `active`, `superseded`, `retracted`. Status describes derived state; it does not erase source events. Superseded records remain historical evidence. A current status alone cannot answer historical `as_of` queries: future retrieval must use validity and relationship history, with a defined policy for retrospectively retracted evidence.
 
@@ -87,11 +87,11 @@ new_event = MemoryEvent(**scope, event_id="evt-2", event_type="correction",
     source_type="user", content="I now prefer Rust.", source_reference=new_ref,
     occurred_at=feb, ingested_at=feb)
 old = MemoryNode(**scope, memory_id="mem-1", memory_type="profile",
-    canonical_content="The user preferred Python.", canonical_key="preferred-language",
+    canonical_content="The user preferred Python.", canonical_key="preferred-language:jan",
     source_event_ids=("evt-1",), provenance=(old_ref,), created_at=jan, updated_at=feb,
     valid_from=jan, valid_until=feb, status="superseded")
 new = MemoryNode(**scope, memory_id="mem-2", memory_type="profile",
-    canonical_content="The user prefers Rust.", canonical_key="preferred-language",
+    canonical_content="The user prefers Rust.", canonical_key="preferred-language:feb",
     source_event_ids=("evt-2",), provenance=(new_ref,), created_at=feb, updated_at=feb,
     valid_from=feb)
 edge = MemoryEdge(**scope, edge_id="edge-1", source_node_id=new.memory_id,
@@ -99,7 +99,7 @@ edge = MemoryEdge(**scope, edge_id="edge-1", source_node_id=new.memory_id,
     source_event_ids=("evt-2",), created_at=feb, valid_from=feb)
 ```
 
-Both events remain unchanged. A future January-as-of lookup should consider the earlier validity; a current lookup should consider the newer evidence and supersession. The new node's unknown end does not guarantee the preference will never change. Matching canonical keys do not collapse two distinct temporal assertions automatically.
+Both events remain unchanged. A future January-as-of lookup should consider the earlier validity; a current lookup should consider the newer evidence and supersession. The new node's unknown end does not guarantee the preference will never change. Use separate canonical keys for distinct assertions. The Stage 3 store rejects conflicting content under a reused key and does not implement automatic temporal supersession.
 
 ## Retrieval schemas
 
@@ -113,10 +113,20 @@ Both events remain unchanged. A future January-as-of lookup should consider the 
 
 ## Protocol boundaries
 
-EventStore: scoped `append`/`get`/`list_events`/`count_events`; MemoryStore: scoped `put`/`get`; GraphStore: scoped `put_edge`/`edges_for`; EmbeddingProvider: `embed` returning numeric vectors; MemoryExtractor: scoped `extract` returning nodes; MemoryRetriever: scoped `retrieve` returning the response schema. The embedding provider performs a transformation, not persistent storage, and receives no implicit authorization authority. These are Python protocols; EventStore has a real SQLite adapter, while the other protocols remain implementation boundaries.
+EventStore: scoped `append`/`get`/`list_events`/`count_events`; MemoryStore: scoped `put`/`get`/`find_by_canonical_key`/`list_memories`/`attach_evidence`; GraphStore: scoped `put_edge`/`edges_for`; EmbeddingProvider: `embed` returning numeric vectors; MemoryExtractor: scoped `extract` returning nodes; MemoryRetriever: scoped `retrieve` returning the response schema. The embedding provider performs a transformation, not persistent storage, and receives no implicit authorization authority. These are Python protocols; EventStore has a real SQLite adapter, MemoryStore and deterministic MemoryExtractor are implemented in Stage 3; graph, embedding and retrieval protocols remain implementation boundaries.
 
 ## Stage 2 event pages and persisted evidence
 
 `oomp.domain.events.EventCursor` extends requested scope with occurrence time, ingestion time and event ID. It describes a keyset position and confers no access rights. `EventPage` contains a tuple of original MemoryEvent values and an optional next cursor. The adapter checks cursor tenant and namespace against AuthorizedScope and reads at most a bounded page.
 
 Persisted event fields use the exact Stage 1 contract, including source_type, SourceReference and deeply immutable metadata after reconstruction. There is no duplicate storage-domain event model. All historical values survive reopen, and equivalent retry ingestion preserves the first persisted ID/time. [Exact schema, ordering and retry policy](storage.md).
+
+## Stage 3 derived evidence and entity values
+
+MemoryCandidate is the intermediate extraction value, with required source event ID and an exact SourceSpan (Python Unicode character offsets and verbatim quote). Its confidence is null unless a defined measurement exists. OOMP verifies allowed transformations of that quote before persistence. Candidate IDs identify proposals; stable canonical memory IDs are computed separately.
+
+MemoryNode metadata stores source attribution, `verified: false` and canonicalization version for the default pipeline. The store refuses `verified: true` and rejects attribution inconsistent with attached events; profile evidence must be user-sourced. These checks prevent source relabeling but do not verify objective truth or prove who authored an event.
+
+Memory source IDs and SourceReferences are reconstructed together in evidence insertion order from actual same-scope events. One source may support several memories and one memory may accumulate several sources. A new evidence link changes updated_at; a no-op retry preserves timestamps. Source occurrence time is not an inferred fact-validity interval.
+
+EntityMention provides a name, explicit type, source event, optional source span and explicitly evidenced aliases. EntityRecord has a stable scoped ID, canonical/normalized names, type, aliases and creation time. Resolution normalizes NFC, whitespace and case within the same scope and type. Parenthetical alias evidence may reuse a single entity; similar spellings or names of different types do not imply identity. SourceSpan, MemoryWrite, ProcessingResult, MemoryCursor and MemoryPage are provider-neutral values in `domain.memories`.

@@ -31,7 +31,7 @@ from .errors import (
     StoredEventCorruptionError,
     UnsupportedSchemaVersionError,
 )
-from .migrations import MIGRATIONS, SCHEMA_VERSION, is_empty_unowned_database, user_version, verify_v1
+from .migrations import MIGRATIONS, SCHEMA_VERSION, is_empty_unowned_database, user_version, verify_v1, verify_v2
 
 
 @dataclass(frozen=True)
@@ -141,8 +141,10 @@ class SQLiteEventStore:
             if is_empty_unowned_database(connection):
                 raise DatabaseUninitializedError("SQLite event database is not initialized")
             raise ForeignDatabaseError("unversioned database contains non-OOMP objects")
-        if version != SCHEMA_VERSION or not verify_v1(connection):
+        if version == 1 and not verify_v1(connection):
             raise StorageCorruptionError("SQLite event schema does not match version 1")
+        if version == 2 and not verify_v2(connection):
+            raise StorageCorruptionError("SQLite memory schema does not match version 2")
 
     @staticmethod
     def _set_wal_and_synchronous(connection: sqlite3.Connection) -> None:
@@ -161,8 +163,10 @@ class SQLiteEventStore:
                 raise UnsupportedSchemaVersionError("SQLite event schema version is newer than supported")
             if version == 0 and not is_empty_unowned_database(connection):
                 raise ForeignDatabaseError("unversioned database contains non-OOMP objects")
-            if version == SCHEMA_VERSION and not verify_v1(connection):
+            if version == 1 and not verify_v1(connection):
                 raise StorageCorruptionError("SQLite event schema does not match version 1")
+            if version == 2 and not verify_v2(connection):
+                raise StorageCorruptionError("SQLite memory schema does not match version 2")
             self._set_wal_and_synchronous(connection)
             connection.execute("BEGIN IMMEDIATE")
             try:
@@ -173,10 +177,18 @@ class SQLiteEventStore:
                     raise UnsupportedSchemaVersionError("SQLite event schema version is newer than supported")
                 if version == 0 and not is_empty_unowned_database(connection):
                     raise ForeignDatabaseError("unversioned database contains non-OOMP objects")
+                if version == 1 and not verify_v1(connection):
+                    raise StorageCorruptionError("SQLite event schema does not match version 1")
+                if version == 2 and not verify_v2(connection):
+                    raise StorageCorruptionError("SQLite memory schema does not match version 2")
                 for target in range(version + 1, SCHEMA_VERSION + 1):
                     for statement in MIGRATIONS[target]:
                         connection.execute(statement)
                     connection.execute(f"PRAGMA user_version = {target}")
+                    if target == 1 and not verify_v1(connection):
+                        raise StorageCorruptionError("SQLite event schema does not match version 1")
+                    if target == 2 and not verify_v2(connection):
+                        raise StorageCorruptionError("SQLite memory schema does not match version 2")
                 self._require_schema(connection)
                 connection.execute("COMMIT")
             except BaseException:
@@ -199,7 +211,11 @@ class SQLiteEventStore:
                 if version == 0:
                     message = "database is uninitialized" if is_empty_unowned_database(connection) else "database is not an OOMP database"
                     return StorageStatus(self.path, True, True, 0, journal, False, message)
-                if not verify_v1(connection):
+                if version == 1:
+                    if not verify_v1(connection):
+                        return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
+                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 2 is needed")
+                if not verify_v2(connection):
                     return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
                 return StorageStatus(self.path, True, True, version, journal, True, "ready")
         except (sqlite3.Error, OSError, StorageError):

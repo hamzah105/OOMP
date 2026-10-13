@@ -182,11 +182,22 @@ class MemoryNode(ContractModel):
     valid_until: UtcDateTime | None = None
     status: MemoryStatus = MemoryStatus.ACTIVE
     tags: tuple[Identifier, ...] = ()
+    metadata: Mapping[str, Any] = Field(default_factory=dict)
 
     @field_validator("canonical_content", "canonical_key")
     @classmethod
     def nonblank_content(cls, value: str) -> str:
         return _nonblank(value)
+
+    @field_validator("metadata")
+    @classmethod
+    def json_metadata(cls, value: Mapping[str, Any]) -> Mapping[str, Any]:
+        _check_json(dict(value))
+        return _freeze_json(dict(value))
+
+    @field_serializer("metadata")
+    def serialize_metadata(self, value: Mapping[str, Any]) -> dict[str, Any]:
+        return _thaw_json(value)
 
     @model_validator(mode="after")
     def chronological(self) -> MemoryNode:
