@@ -61,3 +61,8 @@ models/
 *.pt
 *.pth
 *.bin
+
+# Optional local provider/model caches
+.cache/
+.ollama/
+.huggingface/

@@ -1,4 +1,4 @@
-# SQLite event storage — Stage 2
+# SQLite storage — events, memories, graph and retrieval
 
 Stage 2 supplies a durable source-event log using Python's standard-library `sqlite3`. It stores original evidence and supports scoped chronological reads. It does not extract facts, build graphs, perform semantic search, generate summaries, run background jobs or expose MCP/network services.
 
@@ -30,7 +30,7 @@ Database timestamps use six fractional digits and UTC `Z` so text ordering exact
 
 ## Migration policy
 
-The current `PRAGMA user_version` is 2. Version 0 is initialized only if the database contains no unrelated application objects. Schema identity/structure is checked before use; existing foreign or unsupported future schemas are rejected without resets or dropped tables. Repeated initialization preserves events.
+The current `PRAGMA user_version` is 4. Version 0 is initialized only if the database contains no unrelated application objects. Schema identity/structure is checked before use; existing foreign or unsupported future schemas are rejected without resets or dropped tables. Repeated initialization preserves events.
 
 Migrations are a sequential registry of trusted SQL statements. Statements and the version update execute in an explicit transaction; failures roll back schema/data/version changes. `executescript()` is deliberately avoided because Python 3.11 commits a pending transaction before running it. The mechanism supports future incremental migrations, and Stage 3 registers additive migration 2 after the unchanged migration 1. [Python sqlite3 transaction control](https://docs.python.org/3.11/library/sqlite3.html#transaction-control).
 
@@ -88,7 +88,7 @@ $env:OOMP_DB_PATH = Join-Path $PWD 'data\events.sqlite3'
 
 The first status intentionally reports missing/unready without creating a database. The example uses synthetic records and a dedicated demonstration scope/database; it is safe to rerun. Tests use temporary file-backed databases, never the real user-data directory. Stage 2 acceptance passed: **120 tests in 22.18s**, including all original 79 cases. See [the actual validation record](stage2-validation.md) and [completion report](stage-2-report.md).
 
-## Current schema version 2
+## Canonical memory schema introduced in version 2
 
 | Table | Role and constraints |
 | --- | --- |
@@ -100,7 +100,7 @@ The first status intentionally reports missing/unready without creating a databa
 
 Chronological memory, reverse source and reverse entity indexes serve bounded lookups. These are entity associations, without graph-edge or vector tables. Foreign keys are enabled on each connection before transactions; composite references include both tenant and namespace. [SQLite foreign-key requirements](https://www.sqlite.org/foreignkeys.html).
 
-Fresh initialize runs migrations 1 and 2 in one explicit transaction. A genuine version 1 database is structurally validated before upgrade; its event data, fingerprints, indexes and immutability triggers are preserved. Unsupported future/foreign/damaged schemas are rejected. A failed migration 2 leaves version 1 and its events intact. Repeated initialize is safe. Read-only status reports a valid version 1 database as needing an explicit upgrade; memory operations never initialize or migrate implicitly.
+The Stage 3 migration path runs migrations 1 and 2 in one explicit transaction; current fresh initialization applies the complete 1–4 registry. A genuine version 1 database is structurally validated before upgrade; its event data, fingerprints, indexes and immutability triggers are preserved. Unsupported future/foreign/damaged schemas are rejected. A failed migration 2 leaves version 1 and its events intact. Repeated initialize is safe. Read-only status reports a valid version 1 database as needing an explicit upgrade; memory operations never initialize or migrate implicitly.
 
 ## Memory and entity APIs
 
@@ -117,3 +117,27 @@ Memory pages use `(created_at,memory_id)` ascending keyset order and strict size
 Canonical fingerprints compare stable content/type/key/status/validity/confidence/tags/metadata, excluding record times and accumulated proof. Evidence attachment preserves created_at and advances updated_at only for a new link. Reprocessing the same event creates no duplicate canonical memory, source pair or entity pair. A new event expressing the same supported claim adds evidence to the first memory ID. No inferred supersession, deletion or unbounded scan API is supplied.
 
 Stage 3 memory text, metadata and entity names are plaintext, just like source events. Constraints and fingerprints protect API consistency, not physical database administrators or tamper-proof authenticity.
+
+## Stage 4 schema version 3
+
+Stage 4 adds memory-to-memory graph assertions, edge evidence, recording-time history, topics and topic memberships. Existing migration 1 and 2 definitions remain unchanged. Genuine v2 records are preserved byte-for-byte where previously stored: source rows/triggers, canonical memory IDs/content, source links and entities/aliases.
+
+Graph operations require explicit schema 3 initialization. Version 3 writes use the adapter's registered microsecond oomp_recorded_at() clock; this assigns one actual timestamp to each operation and its evidence group. Source/memory operations retain their compatible schemas, while status indicates an explicit upgrade when an older supported database is inspected. Initialization never replaces a foreign or damaged schema. Version 3 migration failure rolls back to version 2 without losing existing records.
+
+Graph/source groups and governed resolution use one BEGIN IMMEDIATE transaction; multi-query reads use one snapshot. Additional edge evidence has its own system recording time. Topic memberships reference the existing memory table. No vector, lexical index, background-job or second canonical-memory store is introduced.
+
+[Temporal graph](temporal-graph.md) documents identity, append-only history, bounded traversal, topic hierarchy constraints, known_at/valid_at semantics and the uncertainty of original pre-v3 recording dates.
+
+
+## Stage 5 schema version 4 and derived indexes
+
+Migration 4 is additive; the migration 1–3 SQL definitions remain unchanged. It preserves events and their immutability triggers, canonical memories/provenance, entities/aliases, graph edges/evidence, topics/memberships and recording history. It adds FTS5, vector and index-configuration structures. Genuine v3 upgrade, migration rollback, future-schema rejection and repeated initialization are covered by the Stage 5 validation workflow.
+
+SQLiteRetrievalStore separates derived index writes from read_snapshot. FTS5 support is probed in the actual runtime; missing support yields a clear error. Canonical insert synchronization and migration backfill make old and new memories searchable. An explicit scoped rebuild changes only index rows in bounded resumable batch transactions and preserves all original identities/evidence. It freezes a bounded initial identity plan; concurrently inserted memories use the synchronization trigger. A failed later batch leaves earlier valid batches available for retry. Schema validation includes the expected FTS5 virtual and shadow structures.
+
+Durable vectors identify scope, memory, provider/model/configuration version, dimension, content digest and generation time. All vector batches are validated before transactional persistence; provider I/O occurs outside write locks and failures preserve prior valid rows. Indexing is bounded and reports coverage, stale digests, skipped unchanged data and failures. Retrieval uses a complete bounded exact scan of the chosen model space; a capacity error does not masquerade as an exhaustive result.
+
+FTS5 BM25 statistics require a bounded authorized-scope temporary rank corpus. Row and cumulative byte ceilings protect memory; other tenants never enter its rank statistics. All lanes, temporal proof and graph expansion share a read snapshot. See [retrieval](retrieval.md) and [Stage 5 validation](stage5-validation.md) for exact structures, commands, limits and executed results.
+
+
+The v4 additions are memory_fts_docs (scoped stable integer document mapping), memory_fts (FTS5 plus its five SQLite shadow tables), memories_fts_insert (transactional synchronization), embedding_spaces (scoped model/configuration dimension metadata), and memory_embeddings (scoped float64 vector blobs and digests). The mapping and vector tables use scoped foreign keys to canonical memories; vectors also reference their configured space. memory_fts_docs_scope and memory_embeddings_space support partitioned access. Rebuild/index operations never rewrite canonical bodies or event immutability triggers.

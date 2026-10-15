@@ -37,7 +37,7 @@ def event(
 
 def new_database(tmp_path: Path) -> Path:
     database = tmp_path / "memory.sqlite3"
-    assert SQLiteEventStore(database).initialize() == 2
+    assert SQLiteEventStore(database).initialize() == 4
     return database
 
 

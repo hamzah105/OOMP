@@ -2,16 +2,16 @@
 
 ## Purpose and current boundary
 
-OOMP is an independent external memory library, not a chatbot or an application-specific conversation database. Its output will be evidence, source references and retrieval metadata. Applications remain responsible for composing prompts and generating final answers. Stage 1 implements contracts and the package CLI; Stage 2 adds the SQLite source-event adapter. Stage 3 implements deterministic extraction and canonical-memory/entity persistence; graph/retrieval/MCP stages remain planned.
+OOMP is an independent external memory library, not a chatbot or an application-specific conversation database. Its output is evidence, source references and retrieval metadata. Applications remain responsible for composing prompts and generating final answers. Stage 1 implements contracts and the package CLI; Stage 2 adds the SQLite source-event adapter. Stage 3 implements deterministic extraction and canonical-memory/entity persistence; Stage 4 implements the temporal associative graph and topic projections; Stage 5 implements budgeted retrieval and optional local embeddings; MCP remains planned.
 
 ```mermaid
 flowchart LR
     A[Authorized source events] --> B[SQLite event store: Stage 2]
     B --> C[Validated deterministic extraction: Stage 3]
     C --> D[Canonical memories and entity links: Stage 3]
-    D --> E[Temporal associative graph: planned]
-    D --> F[Lexical and vector indexes: planned]
-    E --> G[Budgeted evidence retrieval: planned]
+    D --> E[Temporal associative graph and topics: Stage 4]
+    D --> F[Derived lexical and vector indexes: Stage 5]
+    E --> G[Budgeted evidence retrieval: Stage 5]
     F --> G
     G --> H[Application or MCP client: planned]
 ```
@@ -29,13 +29,13 @@ flowchart LR
 
 ## Components and dependency direction
 
-`domain.models` and `domain.enums` define validated values; `retrieval.contracts` defines the prospective `memory.retrieve` payloads. `domain.interfaces` defines EventStore, MemoryStore, GraphStore, EmbeddingProvider, MemoryExtractor and MemoryRetriever protocols. EventStore and MemoryStore have SQLite implementations, and deterministic MemoryExtractor implements the original pure extraction contract. Stage 3 orchestration validates candidate scope, evidence and allowed transformations before atomic persistence. Future authenticated services must issue authorized scopes before invoking these adapters.
+`domain.models` and `domain.enums` define validated values; `retrieval.contracts` defines the implemented retrieval request/response payloads. `domain.interfaces` defines EventStore, MemoryStore, GraphStore, EmbeddingProvider, MemoryExtractor and MemoryRetriever protocols. EventStore and MemoryStore have SQLite implementations, and deterministic MemoryExtractor implements the original pure extraction contract. Stage 3 orchestration validates candidate scope, evidence and allowed transformations before atomic persistence. Future authenticated services must issue authorized scopes before invoking these adapters.
 
 Protocols are synchronous in this stage to keep local boundaries small. Async service/transport adapters may be introduced later when actual I/O warrants them; no background execution or scheduling semantics are implied. Protocol conformance does not automatically enforce policy. Implementations must compare requested scope with authorized scope and verify object scope, endpoints and evidence references inside the authorized partition.
 
 ## Storage versus indexes
 
-SQLite is the durable source for immutable events, canonical memories, evidence links, entities and explicit aliases. Schema version 2 adds these Stage 3 records to the original event table. Semantic relationships and durable job state remain future storage work. Lexical/vector indexes will be derived, replaceable acceleration structures. Rebuilding an index must not change source identities or erase provenance. Namespace isolation applies to index lookups, caches, candidate selection and final evidence, not just a last response filter.
+SQLite is the durable source for immutable events, canonical memories, evidence links, entities and explicit aliases. Schema version 2 adds these Stage 3 records to the original event table. Schema version 3 adds typed relationship assertions, source evidence, topics, memberships and recording-time history. Durable job state remains future work. Schema version 4 adds derived, replaceable lexical/vector indexes. Rebuilding an index must not change source identities or erase provenance. Namespace isolation applies to index lookups, caches, candidate selection and final evidence, not just a last response filter.
 
 Idempotency is scoped to tenant and namespace. The implemented append returns the original event for equivalent scoped retries and rejects conflicting ID/key reuse. Stage 2 implements transactions, schema version 1, scoped indexes and per-operation resource cleanup. Stage 3 adds derived-memory storage; privileged deletion remains future work. See the storage guide for exact fingerprint and retry semantics.
 
@@ -66,6 +66,25 @@ Before future stages, revisit canonicalization-version migration and alias-drive
 
 `SQLiteMemoryStore.apply_batch` owns one BEGIN IMMEDIATE transaction per event: resolve entities, insert/reuse canonical memories, add source evidence, and add entity links. Any candidate/persistence conflict rolls back that event's derived writes. The already stored event remains independent. Independent connections and database uniqueness constraints protect concurrent retries.
 
-Entities identify explicitly named subjects; memory-to-entity links record association only. They are distinct from Stage 4 MemoryEdge relationships and traversal. No graph-edge table, vector column, background queue or network adapter is added. Candidate extraction is bounded; no history-wide aggregation is performed.
+Entities identify explicitly named subjects; memory-to-entity links record association only. They are distinct from Stage 4 MemoryEdge relationships and traversal. Stage 3 added no graph-edge table, vector column, background queue or network adapter. Stage 4 adds graph persistence separately, preserving the extraction boundary. Candidate extraction is bounded; no history-wide aggregation is performed.
 
-The optional model seam is an interface only. No local model transport/configuration or cloud provider is implemented. A future adapter proposes candidates and OOMP retains policy, validation, identity and write authority. It must never bypass the same evidence checks or write SQL directly. See [extraction](extraction.md) and [storage](storage.md).
+The extraction model seam remains an interface only. Stage 5 adds a separate opt-in local embedding transport; no model extraction adapter or cloud provider is implemented. A future adapter proposes candidates and OOMP retains policy, validation, identity and write authority. It must never bypass the same evidence checks or write SQL directly. See [extraction](extraction.md) and [storage](storage.md).
+
+## Stage 4 graph and governance boundary
+
+The canonical memory store remains the sole owner of memory bodies. Graph records reference canonical MemoryNode endpoints; topics use dedicated projection records and memberships. Event/entity IDs are never forced into memory-node foreign keys. Multiple projections reference one memory identity.
+
+Recording-time history supplements existing caller-supplied event/memory timestamps. Append-only relationship assertions and source attachment history allow valid_at and known_at filtering without destructive source updates or silently overwritten fact statuses. Pre-v3 recording times remain explicitly unknown. Historical projections must not expose evidence recorded after their knowledge cutoff.
+
+Pure source-grounded comparison policy proposes a conflict or replacement only for documented supported slots. The SQLite transaction revalidates governed resolution against actual records and trusted scope. Models and event text have no autonomous write authority. Generic structural links are trusted attributed assertions; they are not objective verification.
+
+General associative cycles are allowed. PART_OF, SUPERSEDES and topic hierarchy rules reject recursive chains using transactionally checked bounds. Traversal and topic trees expose explicit truncation/resource limits. See [temporal graph](temporal-graph.md). Stage 5 consumes these assertions through a scoped retrieval snapshot; graph inspection alone does not establish relevance.
+
+
+## Stage 5 retrieval boundary
+
+The retrieval engine owns planning, deterministic rank fusion, temporal relevance, bounded graph expansion, diversity and packet packing. SQLiteRetrievalStore owns schema 4 derived indexes and one scoped read snapshot reused by all candidate and proof lookups. Canonical MemoryNode/Event/Edge values remain the source of truth; embeddings never define identity. Optional embedding I/O occurs outside database read/write transactions.
+
+Persistent FTS5 rows are backfilled and synchronized with canonical inserts. Ranking statistics come from a bounded per-scope temporary FTS5 corpus so another tenant cannot influence BM25 ranking. Scoped vectors are keyed by provider/model/configuration identity and validated dimension/content digest. Exact scans fail explicitly at capacity. Reads do not initialize, rebuild, embed memories or write conflict relationships.
+
+The model produces vectors or proposed intent; OOMP retains validation, policy, identity, approval, durability and execution. The optional Ollama adapter is explicit, loopback-only and disabled by default. The existing source-grounded conflict policy remains authoritative. The returned evidence packet counts its own JSON, provenance and paths under a disclosed counter; diagnostics and application prompt overhead require separate host accounting. See [retrieval](retrieval.md).

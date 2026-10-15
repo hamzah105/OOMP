@@ -1,4 +1,18 @@
-"""Schemas for future bounded evidence retrieval."""
-from .contracts import GraphPath, MemoryEvidence, RetrievalRequest, RetrievalResponse
+"""Scoped retrieval contracts and lazily loaded operational engine."""
 
-__all__ = ["GraphPath", "MemoryEvidence", "RetrievalRequest", "RetrievalResponse"]
+from .contracts import (
+    EmbeddingSpace, GraphPath, MemoryEvidence, RetrievalMode, RetrievalRequest,
+    RetrievalResponse, RetrievalTrace,
+)
+
+__all__ = [
+    "EmbeddingSpace", "GraphPath", "MemoryEvidence", "RetrievalMode",
+    "RetrievalRequest", "RetrievalResponse", "RetrievalTrace", "RetrievalEngine",
+]
+
+
+def __getattr__(name: str):
+    if name == "RetrievalEngine":
+        from .engine import RetrievalEngine
+        return RetrievalEngine
+    raise AttributeError(name)

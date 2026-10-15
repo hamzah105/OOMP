@@ -93,3 +93,9 @@ No Ollama, local inference transport, timeout/model configuration, cloud API or 
 CLI scope is trusted local administrative intent, not network authentication. Default list output exposes IDs, types and evidence counts/source IDs; canonical content requires show-content. Storage initialization/upgrades are explicit. See [storage](storage.md), [security](security-model.md) and [validation](stage3-validation.md).
 
 Stage 4 must define semantic relationship persistence, endpoint/provenance validation, temporal conflict/supersession policy, traversal bounds and graph transaction behavior before implementation. It must preserve Stage 3 source evidence and scoped identities. Memory-to-entity associations are not a completed temporal graph. Stages 4-10 remain outside this work.
+
+## Stage 4 integration boundary
+
+Stage 4 uses existing canonical memories and their original source evidence; it does not expand these extraction rules. The temporal-graph example creates unsupported RAM memories through the documented trusted MemoryStore API with actual stored SourceReferences and explicit validity.
+
+Conservative conflict policy independently recognizes only its documented source-backed slot grammar. It does not accept arbitrary extraction/model metadata as a verified claim slot. Graph assertions and topic memberships preserve canonical memory IDs. [Temporal graph and governance](temporal-graph.md) describes the separate policy, confirmation and recording-time boundaries. Hybrid retrieval remains Stage 5.

@@ -4,7 +4,7 @@ Stage 1 validates data shape and scope identifiers. Stage 2 implements scoped SQ
 
 ## Local-first operation
 
-CLI diagnostics run locally and send no memory data to a provider. No services bind ports and no credentials are required. The SQLite default is a local user-data directory. Future embeddings should also remain local by default. An externally configured extraction/embedding provider must be an explicit choice, with documented data flow and retention. File permissions and database encryption must be designed for the deployment; they are not present-day capabilities.
+CLI diagnostics run locally and send no memory data to a provider. No services bind ports and no credentials are required. The SQLite default is a local user-data directory. Stage 5 embeddings are disabled by default and support only an explicitly configured literal loopback endpoint. An externally configured extraction/embedding provider must be an explicit choice, with documented data flow and retention. File permissions and database encryption must be designed for the deployment; they are not present-day capabilities.
 
 ## Tenant, namespace and principal
 
@@ -32,7 +32,7 @@ Do not put credentials or secret configuration in event metadata by default. Met
 
 MCP transport credentials and the request's authenticated principal must be checked independently of requested memory scope. Streamable HTTP requires correct authentication/audience mapping, authorization, origin validation and local-first bind defaults. Stdio trusts the invoking process/environment and still needs explicit scope policy. Transport session identifiers are not durable memory keys or authorization tokens. Only the configured service may exercise storage authority; model proposals remain inputs to validation and policy.
 
-Stage 2 tests tenant/namespace event isolation, mismatched scopes/cursors, duplicate identity concurrency and safe storage diagnostics. Graph/vector index leakage, privileged erasure propagation and transport credentials remain later-stage tests.
+Stage 2 tests tenant/namespace event isolation, mismatched scopes/cursors, duplicate identity concurrency and safe storage diagnostics. Stages 4–5 add graph/vector/index isolation tests. Privileged erasure propagation and transport credentials remain future work.
 
 
 ## Implemented Stage 2 enforcement
@@ -51,8 +51,29 @@ Claims retain attribution and `verified: false`; the store rejects unsupported v
 
 The extractor skips whole events containing recognizable passwords, API keys, secret/token assignments, bearer credentials or private-key headers. This is a limited heuristic, not a comprehensive secret scanner. Original events remain stored in Stage 2 and may still contain sensitive data. Trusted direct MemoryStore callers remain responsible for their own content policy. Skipped extraction does not imply deletion, encryption or safe publication of the original event.
 
-Injected extractors have proposal authority only. No implemented local model adapter, endpoint or configuration exists; a future adapter must be explicit opt-in, bounded, validated and subject to the same source grounding. No provider writes directly to persistence. The default operation has no internet, cloud, Ollama, GPU or arbitrary tool dependency.
+Injected extractors have proposal authority only. No extraction model adapter exists; a future extraction adapter must be explicit opt-in, bounded, validated and subject to the same source grounding. Stage 5 has a separate local embedding adapter that produces vectors and has no write authority. No provider writes directly to persistence. The default operation has no internet, cloud, Ollama, GPU or arbitrary tool dependency.
 
 All reads/writes require AuthorizedScope and include tenant and namespace in lookups and foreign keys. Canonical-memory and entity identities are scoped; there is no cross-tenant cache or identity reuse. Scope construction is a trusted in-process boundary, not an authentication mechanism. Local CLI commands use a local administrative principal and rely on machine/filesystem access. A tenant argument does not authenticate an internet user.
 
 Memory list omits canonical content by default; `--show-content` is a deliberate trusted-debugging option. IDs, types and source IDs remain metadata and can themselves be sensitive. Database content is plaintext. No encryption, secure erasure, public API authentication, model safety certification or administrator-resistant authenticity is claimed.
+
+## Stage 4 graph trust and historical access
+
+All graph endpoints, evidence links, topic records, memberships, cursors and traversal steps remain inside authorized tenant and namespace. Composite foreign keys reinforce existence/scope checks. Topic membership and shared wording do not imply conflict, verification or cross-tenant identity reuse.
+
+Structural links are attributed trusted-caller assertions. Protected conflict/supersession links require supported source-grounded policy, explicit confirmation and transactional revalidation; generic edge insertion cannot bypass governance. Unsupported grammar and unknown temporal overlap yield uncertainty. No model or source text executes tools, writes SQL or autonomously replaces a fact.
+
+Actual recording times are assigned by storage. Historical known_at views exclude later assertions and evidence; caller-supplied backdated timestamps cannot make later writes appear known earlier. Pre-v3 original recording times are unavailable and explicitly reported as such. This is auditable local history, not a trusted external time or cryptographic authenticity service.
+
+Graph/CLI output hides canonical content by default. IDs, edge metadata and topic names may still be sensitive. Local machine/filesystem access supplies CLI authority; a tenant argument is not remote authentication. Plaintext SQLite, administrator trust, limited secret scanning and absent encryption/erasure remain unchanged. No network dependency, MCP transport or TRACE integration is added.
+
+
+## Stage 5 retrieval and optional local vectors
+
+All candidate lanes, FTS ranking statistics, vector spaces, graph steps and final provenance are partitioned before ranking and packing. Requests must match a revalidated AuthorizedScope. A single read snapshot prevents later attachments or corrections from entering historical proof mid-request. The entity lane is disabled for known_at views where association history cannot establish availability. No retrieval operation grants mutation authority.
+
+The optional Ollama transport is disabled unless deliberately constructed/configured. It accepts literal loopback addresses, disables proxy inheritance, rejects redirects and bounds inputs, responses and timeouts. OOMP does not download models, expose a network listener or permit a cloud endpoint. The local daemon and its configured model remain trusted software. Vector validation checks numeric finiteness, norm, dimension and model identity; data-driven instructions cannot alter endpoint/configuration/scope.
+
+Memory bodies are untrusted data in a JSON evidence packet. IDs, source references, locators and graph metadata may also be sensitive. The CLI hides content by default, including JSON output, and exposes it only through --show-content. Provider failures and ordinary diagnostics must not echo query text, memory text or response bodies. Downstream hosts remain responsible for prompt construction, tool authority and their own complete prompt token budget.
+
+Derived vectors and FTS rows remain plaintext private data subject to any future retention/erasure policy. Fingerprints do not establish objective truth or administrator-resistant authenticity. No encryption, deletion propagation, remote authentication, MCP transport or TRACE integration is implemented by this milestone.

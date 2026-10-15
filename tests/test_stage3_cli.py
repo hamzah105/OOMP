@@ -43,7 +43,7 @@ def source() -> MemoryEvent:
 
 def test_extract_and_list_hide_content_until_opted_in(tmp_path: Path) -> None:
     database = tmp_path / "cli.sqlite3"
-    assert SQLiteEventStore(database).initialize() == 2
+    assert SQLiteEventStore(database).initialize() == 4
     SQLiteEventStore(database).append(SCOPE, source())
     extract = cli(
         "memory", "extract", "--tenant", SCOPE.tenant_id, "--namespace", SCOPE.namespace,

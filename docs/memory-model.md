@@ -1,6 +1,6 @@
 # Memory model
 
-All contracts use Pydantic v2, reject extra fields, validate defaults and prohibit field reassignment. Evidence collections are tuples. Event, memory and retrieval metadata are recursively immutable snapshots and serialize as ordinary JSON objects/arrays. These domain values remain provider independent. Stage 2 persists MemoryEvent through a separate SQLite adapter; Stage 3 persists canonical MemoryNode values and conservative entity associations; authentication and graph engines remain unimplemented.
+All contracts use Pydantic v2, reject extra fields, validate defaults and prohibit field reassignment. Evidence collections are tuples. Event, memory and retrieval metadata are recursively immutable snapshots and serialize as ordinary JSON objects/arrays. These domain values remain provider independent. Stage 2 persists MemoryEvent through a separate SQLite adapter; Stage 3 persists canonical MemoryNode values and conservative entity associations; Stage 4 supplies scoped graph persistence and structural/history inspection; public authentication remains unimplemented.
 
 ## Identity and scope
 
@@ -17,7 +17,7 @@ A namespace belongs within a tenant. A principal is an actor, not a substitute f
 
 Required: `source_system`, `external_event_id`, `timestamp`. Optional: `session_id`, `turn_id`, `locator` (nonblank when supplied, at most 1024 characters). A document ID uses `external_event_id` rather than a separate ambiguous field. A locator can name an evidence span, page or URI; it is not fetched or executed.
 
-Source references describe external origin. OOMP `event_id` describes an internal historical event. A node carries both internal source IDs and external provenance, enabling a future store to resolve, audit and verify links. Stage 1 requires their presence but cannot verify their external truth or database consistency.
+Source references describe external origin. OOMP `event_id` describes an internal historical event. A node carries both internal source IDs and external provenance, enabling storage to resolve, audit and verify links. Stage 1 requires their presence but cannot verify their external truth or database consistency.
 
 ## MemoryEvent
 
@@ -48,7 +48,7 @@ Required: `memory_id`, `tenant_id`, `namespace`, `memory_type`, `canonical_conte
 
 A node retains its persistent identity across graph views. Topic membership uses relationships, avoiding duplicate facts just because several projects need them. Stage 3 assigns a versioned scoped hash of conservative normalized content, memory type and attribution and enforces scoped canonical-key uniqueness. It merges equivalent records' evidence, preserving the first memory ID; conflicting content under one key is rejected.
 
-`MemoryStatus`: `active`, `superseded`, `retracted`. Status describes derived state; it does not erase source events. Superseded records remain historical evidence. A current status alone cannot answer historical `as_of` queries: future retrieval must use validity and relationship history, with a defined policy for retrospectively retracted evidence.
+`MemoryStatus`: `active`, `superseded`, `retracted`. Status describes derived state; it does not erase source events. Superseded records remain historical evidence. A current status alone cannot answer historical `as_of` queries: retrieval must use validity and relationship history, with a defined policy for retrospectively retracted evidence.
 
 ## MemoryEdge
 
@@ -109,11 +109,11 @@ Both events remain unchanged. A future January-as-of lookup should consider the 
 
 `GraphPath` contains nonempty `node_ids`, `edge_ids`, `relationship_types`. It requires `len(edge_ids) == len(node_ids)-1` and equal edge/relationship counts. A single-node path is allowed. This validates shape, not graph existence or authorized connectivity.
 
-`RetrievalResponse` requires `retrieval_id`; memories, source references and graph paths default empty; strict nonnegative `estimated_token_count` defaults zero. An empty response is a valid payload, not a working retriever. The response has no generated-answer field. Budget compliance, scoring, actual token accounting, endpoint resolution and provenance consistency require the future retrieval/service implementation.
+`RetrievalResponse` requires `retrieval_id`; memories, source references and graph paths default empty; strict nonnegative `estimated_token_count` defaults zero. An empty response is valid when there is no supported evidence or no whole evidence item fits the selected budget. The response has no generated-answer field. Stage 5 implements budget compliance, scoring, endpoint resolution and provenance checks. Its expanded fields and accounting boundary are documented in [retrieval](retrieval.md).
 
 ## Protocol boundaries
 
-EventStore: scoped `append`/`get`/`list_events`/`count_events`; MemoryStore: scoped `put`/`get`/`find_by_canonical_key`/`list_memories`/`attach_evidence`; GraphStore: scoped `put_edge`/`edges_for`; EmbeddingProvider: `embed` returning numeric vectors; MemoryExtractor: scoped `extract` returning nodes; MemoryRetriever: scoped `retrieve` returning the response schema. The embedding provider performs a transformation, not persistent storage, and receives no implicit authorization authority. These are Python protocols; EventStore has a real SQLite adapter, MemoryStore and deterministic MemoryExtractor are implemented in Stage 3; graph, embedding and retrieval protocols remain implementation boundaries.
+EventStore: scoped `append`/`get`/`list_events`/`count_events`; MemoryStore: scoped `put`/`get`/`find_by_canonical_key`/`list_memories`/`attach_evidence`; GraphStore: scoped `put_edge`/`edges_for`; EmbeddingProvider: `embed` returning numeric vectors; MemoryExtractor: scoped `extract` returning nodes; MemoryRetriever: scoped `retrieve` returning the response schema. The embedding provider performs a transformation, not persistent storage, and receives no implicit authorization authority. These are Python protocols; EventStore has a real SQLite adapter, MemoryStore and deterministic MemoryExtractor are implemented in Stage 3; GraphStore receives a SQLite implementation in Stage 4; Stage 5 implements embedding and retrieval adapters while retaining those protocol boundaries.
 
 ## Stage 2 event pages and persisted evidence
 
@@ -130,3 +130,20 @@ MemoryNode metadata stores source attribution, `verified: false` and canonicaliz
 Memory source IDs and SourceReferences are reconstructed together in evidence insertion order from actual same-scope events. One source may support several memories and one memory may accumulate several sources. A new evidence link changes updated_at; a no-op retry preserves timestamps. Source occurrence time is not an inferred fact-validity interval.
 
 EntityMention provides a name, explicit type, source event, optional source span and explicitly evidenced aliases. EntityRecord has a stable scoped ID, canonical/normalized names, type, aliases and creation time. Resolution normalizes NFC, whitespace and case within the same scope and type. Parenthetical alias evidence may reuse a single entity; similar spellings or names of different types do not imply identity. SourceSpan, MemoryWrite, ProcessingResult, MemoryCursor and MemoryPage are provider-neutral values in `domain.memories`.
+
+## Stage 4 relationship and historical projections
+
+MemoryEdge continues to mean a directed memory-to-memory relationship. Existing fields and invariants are preserved. Storage adds actual system recording time, recording principal and complete supporting SourceReferences in separate graph records. Source event IDs remain evidence links, never graph endpoints.
+
+Persisted assertions are immutable and initially active. Effective superseded/disputed state is derived from visible governed assertions rather than rewriting canonical MemoryNode content or original source evidence. Stage 4 adds no arbitrary status edit/delete API.
+
+Source validity [valid_from,valid_until) and system recorded_at are distinct. Unknown validity and pre-v3 recording times remain unknown; created_at/ingested_at do not silently become historical fact or knowledge dates. Historical views filter both relationship and evidence availability. A minimal temporal projection is not a general revision log for every node field.
+
+Conflict proposals are validated, provider-neutral values that grant no authority. Applying a supported proposal requires trusted AuthorizedScope, deliberate confirmation and revalidation against actual source evidence. Topics and memberships form explicit scoped projections that preserve canonical memory IDs. See [temporal graph](temporal-graph.md).
+
+
+## Stage 5 retrieval projections
+
+RetrievalRequest keeps Stage 1 defaults and integer bounds, including token_budget=1. Stage 5 adds mode and explicit known_at/valid_at controls, resource limits and deliberate degraded-hybrid policy. as_of maps to reported validity, never system recording time. MemoryEvidence adds actual supporting event identities, selection reasons and temporal uncertainty without replacing canonical MemoryNode. Returned references use the eligible recording-time evidence projection, not unfiltered present-day provenance.
+
+RetrievalResponse carries real lane counts, mode/degradation warnings, estimated_token_count, token_budget, counting_method and the actual serialized context packet. Its evidence budget includes the complete packet wrappers/IDs/provenance/paths; outer diagnostics are separate. Empty evidence has a zero-length packet. Retrieval scores are deterministic ranking signals, not claim confidence or verification. Existing schema-only callers retain compatible defaults. [Exact behavior](retrieval.md).

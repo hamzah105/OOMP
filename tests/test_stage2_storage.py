@@ -89,14 +89,14 @@ def test_fresh_initialization_version_wal_and_repeated_init_preserve_rows(tmp_pa
     path = tmp_path / "nested" / "events.db"
     store = SQLiteEventStore(path)
     assert not path.parent.exists()
-    assert store.initialize() == 2
+    assert store.initialize() == 4
     assert path.is_file()
     status = store.status()
     assert status.exists and status.accessible and status.ready
-    assert status.schema_version == 2
+    assert status.schema_version == 4
     assert status.journal_mode in {"wal", "delete", "truncate", "persist"}
     with closing(sqlite3.connect(path)) as connection, connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
         objects = {
             row[0] for row in connection.execute(
                 "SELECT name FROM sqlite_master WHERE name NOT GLOB 'sqlite_*'"
@@ -108,9 +108,21 @@ def test_fresh_initialization_version_wal_and_repeated_init_preserve_rows(tmp_pa
             "memories", "memories_chronological", "memory_sources",
             "memory_sources_event", "entities", "entity_aliases",
             "memory_entities", "memory_entities_entity",
+            "graph_meta", "memory_recordings", "memory_source_recordings",
+            "memories_record_insert", "memory_sources_record_insert",
+            "memory_edges", "memory_edges_outgoing", "memory_edges_incoming",
+            "memory_edges_chronological", "edge_evidence", "edge_evidence_event",
+            "topics", "topics_children", "topic_memberships",
+            "topic_memberships_memory", "memory_edges_no_update",
+            "memory_edges_no_delete", "edge_evidence_no_update",
+            "edge_evidence_no_delete",
+            "memory_fts_docs", "memory_fts_docs_scope", "memory_fts",
+            "memory_fts_config", "memory_fts_content", "memory_fts_data",
+            "memory_fts_docsize", "memory_fts_idx", "memories_fts_insert",
+            "embedding_spaces", "memory_embeddings", "memory_embeddings_space",
         }
     stored = store.append(scope(), event())
-    assert store.initialize() == 2
+    assert store.initialize() == 4
     assert store.get(scope(), "event-1") == stored
     assert store.count_events(scope()) == 1
 
@@ -133,14 +145,14 @@ def test_negative_schema_version_is_invalid_without_initialize_mutation(tmp_path
 def test_future_unowned_and_structurally_damaged_schemas_fail_closed(tmp_path):
     future_path = tmp_path / "future.db"
     with closing(sqlite3.connect(future_path)) as connection, connection:
-        connection.execute("PRAGMA user_version=3")
+        connection.execute("PRAGMA user_version=5")
     future = SQLiteEventStore(future_path)
     status = future.status()
-    assert status.exists and status.accessible and status.schema_version == 3 and not status.ready
+    assert status.exists and status.accessible and status.schema_version == 5 and not status.ready
     with pytest.raises(UnsupportedSchemaVersionError):
         future.initialize()
     with closing(sqlite3.connect(future_path)) as connection, connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
 
     foreign_path = tmp_path / "foreign.db"
     with closing(sqlite3.connect(foreign_path)) as connection, connection:
@@ -175,7 +187,7 @@ def test_failed_migration_rolls_back_schema_and_version(tmp_path, monkeypatch):
         ))
         assert names == []
     monkeypatch.setitem(migrations.MIGRATIONS, 1, MIGRATION_1)
-    assert SQLiteEventStore(path).initialize() == 2
+    assert SQLiteEventStore(path).initialize() == 4
 
 
 def test_reopen_preserves_complete_event_and_multiple_records(store):

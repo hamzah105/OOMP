@@ -76,3 +76,42 @@ class SchemaUpgradeRequiredError(StorageError):
 
 class MemoryNotFoundError(StorageError):
     """A requested canonical memory is absent from the authorized partition."""
+
+
+class GraphConflictError(StorageError):
+    """An edge identity or graph policy conflicts with durable state."""
+
+
+class GraphLimitError(StorageError):
+    """A bounded graph operation cannot safely provide a complete answer."""
+
+
+class EdgeNotFoundError(StorageError):
+    """A graph edge is absent from the authorized scope."""
+
+
+class TopicConflictError(StorageError):
+    """A topic identity or immutable parent conflicts with durable state."""
+
+
+class TopicNotFoundError(StorageError):
+    """A topic is absent from the authorized scope."""
+
+
+class StoredGraphCorruptionError(StorageCorruptionError):
+    """Stored graph data failed validation."""
+
+class RetrievalIndexError(StorageError):
+    """A derived retrieval index is unavailable or inconsistent."""
+
+
+class RetrievalLimitError(RetrievalIndexError):
+    """A complete scoped retrieval scan exceeds a configured bound."""
+
+
+class EmbeddingSpaceError(RetrievalIndexError):
+    """Vectors or metadata do not match the selected embedding space."""
+
+
+class FTSUnavailableError(RetrievalIndexError):
+    """The local Python SQLite runtime lacks the FTS5 module."""

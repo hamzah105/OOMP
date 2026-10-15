@@ -6,7 +6,7 @@ Potential uses include persistent project context, changing user preferences, do
 
 ## Current scope
 
-Stage 1 is implemented and acceptance-verified (79 tests passed). It includes validated domain and retrieval schemas, six replaceable component protocols, an offline diagnostic CLI, unit tests, and architectural, security and research documentation. Stage 2 adds a SQLite event store, scoped idempotent ingestion, chronological pages and storage diagnostics (acceptance verified: 120 total tests passed, including all original 79). Stage 3 acceptance passed: **192 tests**, including the original 120. It adds deterministic offline extraction, schema version 2 canonical-memory/entity persistence, scoped evidence deduplication, and synchronous atomic processing. Its validation results are recorded in [Stage 3 validation](docs/stage3-validation.md). There is no implemented local model adapter, graph engine, search ranking, background worker, MCP server, TRACE adapter, inference, or dashboard. A token budget limits selected evidence; it does not enlarge an LLM's native context window.
+Stage 1 is implemented and acceptance-verified (79 tests passed). It includes validated domain and retrieval schemas, six replaceable component protocols, an offline diagnostic CLI, unit tests, and architectural, security and research documentation. Stage 2 adds a SQLite event store, scoped idempotent ingestion, chronological pages and storage diagnostics (acceptance verified: 120 total tests passed, including all original 79). Stage 3 acceptance passed: **192 tests**, including the original 120. It adds deterministic offline extraction, schema version 2 canonical-memory/entity persistence, scoped evidence deduplication, and synchronous atomic processing. Its validation results are recorded in [Stage 3 validation](docs/stage3-validation.md). Stage 4 acceptance passed: **226 total tests**, including all 192 prior cases. It adds a typed temporal graph, explicit topic projections, bounded structural traversal and conservative conflict governance; its results are recorded in [Stage 4 validation](docs/stage4-validation.md). Stage 5 acceptance passed: **279 total tests**, including all 226 prior cases. Stage 5 adds offline lexical retrieval, explicit local semantic/hybrid modes, derived SQLite v4 indexes and bounded evidence packing. Its implementation and validation are documented in [retrieval](docs/retrieval.md) and [Stage 5 validation](docs/stage5-validation.md). Background workers, MCP, TRACE integration, answer generation and dashboards remain future work. A token budget limits selected evidence; it does not enlarge an LLM's native context window.
 
 The Python import is `oomp`; local distribution metadata uses `oomp-memory` version `0.1.0`. This does not assert ownership or reservation of a PyPI name. OOMP does not import or modify TRACE.AI. Its eventual adapter belongs at an external integration boundary.
 
@@ -38,7 +38,7 @@ Activation is optional. If PowerShell activation is restricted, or `python` reso
 
 Installation may download the small Python dependencies. Once installed, commands and tests require no network service, external database server, model, GPU, MCP host, or cloud credentials. Storage and extraction tests create temporary SQLite files. Storage configuration is optional; see `sample.env` and the storage guide. OOMP does not auto-load environment files.
 
-`doctor` checks this foundation's Python compatibility, installed Pydantic dependency, package imports, and local readiness. Its exit code is nonzero when required checks fail. Use `storage status` separately to inspect Stage 2 storage. Doctor does not create or require a database and does not report future retrieval/MCP services as operational.
+`doctor` checks this foundation's Python compatibility, installed Pydantic dependency, package imports, and local readiness. Its exit code is nonzero when required checks fail. Use `storage status` separately to inspect Stage 2 storage. Doctor does not create or require a database and does not exercise retrieval, an embedding model or an MCP service.
 
 ## Package layout
 
@@ -54,14 +54,24 @@ src/oomp/
         interfaces.py
         events.py
         memories.py
+        graph.py
+        graph_policy.py
     retrieval/
         __init__.py
         contracts.py
+        engine.py
+        fusion.py
+        packing.py
+    providers/
+        ollama.py
     ingestion/
         contracts.py
         extraction.py
         canonicalization.py
         pipeline.py
+    graph/
+        __init__.py
+        service.py
     storage/
         __init__.py
         config.py
@@ -70,17 +80,20 @@ src/oomp/
         sqlite.py
         memory_store.py
         entity_store.py
+        graph_store.py
+        topic_store.py
+        retrieval_store.py
 tests/
 docs/
 ```
 
-The domain owns identity, provenance, scope and temporal validation. Retrieval owns typed requests, evidence and graph-path metadata. Protocols define service boundaries; Stage 2 implements EventStore with a SQLite adapter. Stage 3 implements MemoryStore and deterministic MemoryExtractor, with provider-neutral candidate/entity contracts and separate SQLite persistence. Graph, embedding and retrieval components remain contracts. CLI code depends on these contracts, while the domain has no provider SDK or application dependency.
+The domain owns identity, provenance, scope and temporal validation. Retrieval owns typed requests, evidence and graph-path metadata. Protocols define service boundaries; Stage 2 implements EventStore with a SQLite adapter. Stage 3 implements MemoryStore and deterministic MemoryExtractor, with provider-neutral candidate/entity contracts and separate SQLite persistence. Stage 4 implements scoped graph storage and structural inspection. Stage 5 implements MemoryRetriever and an optional loopback Ollama embedding adapter behind the existing embedding protocol. CLI code depends on these contracts, while the domain has no provider SDK or application dependency.
 
 ## Dependencies
 
 Runtime: Python `>=3.11`, Pydantic `>=2.9,<3`. Development: pytest `>=8,<10`. Build backend: setuptools `>=77`, supporting modern license metadata. `argparse`, datetime, enums and protocols come from the standard library. See [pyproject.toml](pyproject.toml) for the source of constraints.
 
-SQLite now uses the standard library, with no added package dependency. Planned dependencies remain separate: a local embedding model and replaceable vector indexes, optional extraction providers, and the official MCP Python SDK v2 in Stage 7. They are not runtime dependencies today. Recheck compatibility and security at each stage; see [architecture](docs/architecture.md).
+SQLite now uses the standard library, with no added package dependency. Optional local embedding models run separately through Ollama; vector persistence and cosine search use the standard library. Optional extraction providers and the MCP transport remain future work. No model or provider SDK is a compulsory runtime dependency. Recheck compatibility and security at each stage; see [architecture](docs/architecture.md).
 
 ## Tests and verification
 
@@ -98,6 +111,12 @@ Tests cover event/source consistency, provenance, identity validation, memory an
 
 - [SQLite events, canonical memories, migration and retry policy](docs/storage.md)
 - [Deterministic extraction, canonical identity and entity aliases](docs/extraction.md)
+- [Temporal graph, topics and conflict governance](docs/temporal-graph.md)
+- [Hybrid retrieval, indexing and evidence budgets](docs/retrieval.md)
+- [Stage 5 validation](docs/stage5-validation.md)
+- [Complete Stage 5 report](docs/stage-5-report.md)
+- [Stage 4 validation](docs/stage4-validation.md)
+- [Complete Stage 4 report](docs/stage-4-report.md)
 - [Stage 3 validation](docs/stage3-validation.md)
 - [Complete Stage 3 report](docs/stage-3-report.md)
 - [Architecture](docs/architecture.md)
@@ -147,6 +166,28 @@ The default pipeline reads one scoped source event, validates conservative candi
 .\.venv\Scripts\oomp.exe memory list --tenant tenant-stage3-example --namespace synthetic --db .\data\stage3-synthetic.sqlite3
 ~~~
 
-The example uses synthetic records and verifies persisted results after reopening. Use its printed scope and event IDs when trying `memory extract --tenant TENANT --namespace NAMESPACE --event-id EVENT_ID --db PATH`. Memory listing omits canonical content unless the trusted local operator supplies `--show-content`. Tenant strings do not authenticate a caller: these local administrative commands rely on machine/filesystem access. Memory commands require an explicitly initialized version 2 database; use `storage init` to upgrade a genuine version 1 database without replacing its events.
+The example uses synthetic records and verifies persisted results after reopening. Use its printed scope and event IDs when trying `memory extract --tenant TENANT --namespace NAMESPACE --event-id EVENT_ID --db PATH`. Memory listing omits canonical content unless the trusted local operator supplies `--show-content`. Tenant strings do not authenticate a caller: these local administrative commands rely on machine/filesystem access. Memory commands require explicitly initialized schema 2 or later; graph commands require schema 3 or later; use `storage init` to upgrade a genuine version 1 database without replacing its events.
 
-Stage 3 coverage is deliberately narrow. Exact/conservatively normalized identity is implemented; unrestricted paraphrase equivalence, independent fact verification, temporal supersession, semantic retrieval and full entity linking are not.
+Stage 3 coverage is deliberately narrow. Exact/conservatively normalized identity is implemented; unrestricted paraphrase equivalence, independent fact verification, general semantic equivalence and full entity linking are not. Stage 4 adds explicit evidence-backed temporal relationships without expanding the extractor.
+
+## Stage 4 temporal associative graph
+
+Canonical memories can participate in persistent typed memory-to-memory relationships and appear in multiple explicit topic branches without duplication. Structural neighbors/traversal and historical views remain scoped and bounded. Valid reported time and system knowledge time are separate; unknown legacy recording dates and unknown validity stay explicit.
+
+Conflict inspection proposes changes without writing. Applying supported CONTRADICTS or SUPERSEDES relationships requires trusted scope, explicit confirmation and source-policy revalidation in the storage transaction. A newer message alone never establishes supersession. Original claims and evidence remain intact.
+
+The [synthetic Stage 4 example](examples/stage4_temporal_graph.py) demonstrates evolving RAM claims, one memory in two topic branches and an unresolved contradiction. See [the temporal graph guide](docs/temporal-graph.md) for API, CLI, migration and limitations. Graph inspection supplies structure; Stage 5 applies relevance, temporal filtering and packet budgets before returning evidence.
+
+
+## Stage 5 long-term recall
+
+The default retriever searches persisted canonical memories through real SQLite FTS5/BM25 and augments them with exact identities, explicit topics and bounded relevant graph paths. It returns source-attributed evidence under a disclosed context budget. Semantic/hybrid modes require explicit local embedding configuration and compatible durable vectors; standard tests and the synthetic example run without any model or network service.
+
+~~~powershell
+.\.venv\Scripts\python.exe examples\stage5_hybrid_retrieval.py --db .\data\stage5-synthetic.sqlite3
+.\.venv\Scripts\oomp.exe retrieve --help
+.\.venv\Scripts\oomp.exe memory index --help
+.\.venv\Scripts\oomp.exe retrieval status --help
+~~~
+
+The example compares an early project fact with a latest-eight-only view after more than 100 later synthetic events, then demonstrates synthetic vector mechanics, governed RAM history, graph relevance and whole-evidence budget drops. Synthetic vectors do not measure real semantic quality. The default UTF-8-byte counter measures the actual evidence JSON; the outer diagnostic response and host prompt overhead are separate. CLI content display requires --show-content. See [retrieval](docs/retrieval.md) for limits, optional Ollama setup and manual commands, and [validation](docs/stage5-validation.md) for actual executed results.

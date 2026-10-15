@@ -147,6 +147,229 @@ def memory_list(
         print(f"More memories available after: {page.next_cursor.memory_id}")
     return 0
 
+def _graph_scope(tenant: str, namespace: str):
+    from .domain.models import AuthorizedScope
+
+    # This CLI is a trusted local administrative tool, not remote authentication.
+    return AuthorizedScope(tenant_id=tenant, namespace=namespace, principal_id="local-cli")
+
+
+def _graph_timestamp(value: str):
+    from datetime import datetime
+
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("timestamp must be ISO 8601 with a UTC offset") from error
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise argparse.ArgumentTypeError("timestamp must include a UTC offset")
+    return parsed
+
+
+def _edge_summary(record) -> dict[str, object]:
+    edge = record.edge
+    return {
+        "edge_id": edge.edge_id,
+        "source_node_id": edge.source_node_id,
+        "target_node_id": edge.target_node_id,
+        "relationship_type": edge.relationship_type.value,
+        "source_event_ids": list(edge.source_event_ids),
+        "recorded_at": record.recorded_at.isoformat(),
+        "valid_from": edge.valid_from.isoformat() if edge.valid_from else None,
+        "valid_until": edge.valid_until.isoformat() if edge.valid_until else None,
+    }
+
+
+def _graph_command(args) -> int:
+    from .domain.enums import RelationshipType
+    from .graph import GraphService
+    from .storage.errors import StorageError
+
+    try:
+        scope = _graph_scope(args.tenant, args.namespace)
+        service = GraphService(args.db)
+        if args.graph_command == "link":
+            relation = RelationshipType(args.relationship)
+            if relation in {RelationshipType.CONTRADICTS, RelationshipType.SUPERSEDES}:
+                if not args.confirm_resolution:
+                    raise ValueError("protected relationship requires --confirm-resolution")
+                if args.valid_from is not None or args.valid_until is not None:
+                    raise ValueError("protected validity comes from the reviewed source memories")
+                selected_target = args.event_ids[1] if len(args.event_ids) > 1 else None
+                assessment = service.propose_conflict(
+                    scope, args.source, args.target,
+                    source_event_id=args.event_ids[0],
+                    target_event_id=selected_target,
+                )
+                proposal = assessment.proposal
+                if proposal is None or proposal.relationship_type is not relation:
+                    raise ValueError("no supported protected relationship proposal")
+                if tuple(args.event_ids) != proposal.source_event_ids:
+                    raise ValueError("provided event IDs do not match proposal evidence")
+                record = service.resolve(scope, proposal, confirm=True)
+            else:
+                if args.confirm_resolution:
+                    raise ValueError("--confirm-resolution is for protected relationships")
+                record = service.link(
+                    scope, args.source, args.target, relation, args.event_ids,
+                    valid_from=args.valid_from, valid_until=args.valid_until,
+                )
+            print(json.dumps(_edge_summary(record), ensure_ascii=False, separators=(",", ":")))
+            return 0
+        if args.graph_command == "propose":
+            assessment = service.propose_conflict(
+                scope, args.source, args.target,
+                source_event_id=args.source_event_id,
+                target_event_id=args.target_event_id,
+            )
+            print(assessment.model_dump_json())
+            return 0
+        if args.graph_command == "neighbors":
+            records = service.neighbors(
+                scope, args.memory_id, direction=args.direction, limit=args.limit,
+            )
+            for record in records:
+                print(json.dumps(_edge_summary(record), ensure_ascii=False, separators=(",", ":")))
+            return 0
+        if args.graph_command == "history":
+            result = service.history(
+                scope, args.memory_id, valid_at=args.valid_at, known_at=args.known_at,
+            )
+            state = result.memory
+            summary = {
+                "memory_id": state.memory_id,
+                "known": state.known,
+                "valid": state.valid,
+                "effective_status": state.effective_status.value if state.effective_status else None,
+                "recorded_at": state.recorded_at.isoformat() if state.recorded_at else None,
+                "source_event_ids": list(state.source_event_ids),
+                "superseded_by": list(state.superseded_by),
+                "legacy_recording_unknown": state.legacy_recording_unknown,
+                "incoming_edges": [_edge_summary(record) for record in result.incoming_edges],
+                "outgoing_edges": [_edge_summary(record) for record in result.outgoing_edges],
+            }
+            print(json.dumps(summary, ensure_ascii=False, separators=(",", ":")))
+            return 0
+        if args.graph_command == "topic-tree":
+            tree = service.topic_tree(
+                scope, args.root_topic_id, max_depth=args.max_depth,
+                max_nodes=args.max_nodes,
+            )
+            print(json.dumps({
+                "root_topic_id": tree.root_topic_id,
+                "truncated": tree.truncated,
+                "nodes": [
+                    {
+                        "topic_id": node.topic.topic_id,
+                        "parent_id": node.topic.parent_id,
+                        "depth": node.depth,
+                        "memory_ids": list(node.memory_ids),
+                    }
+                    for node in tree.nodes
+                ],
+            }, ensure_ascii=False, separators=(",", ":")))
+            return 0
+    except (StorageError, OSError, ValueError, TypeError) as error:
+        print(f"Graph operation failed ({type(error).__name__}).", file=sys.stderr)
+        return 1
+    raise AssertionError("unknown graph command")
+
+def _retrieval_provider(args):
+    if args.embedding_provider is None:
+        if args.embedding_model is not None or args.embedding_dimension is not None:
+            raise ValueError("--embedding-provider ollama is required for model options")
+        return None
+    if args.embedding_provider != "ollama":
+        raise ValueError("unsupported embedding provider")
+    if args.embedding_model is None or args.embedding_dimension is None:
+        raise ValueError("--embedding-model and --embedding-dimension are required")
+    from .providers import OllamaEmbeddingProvider
+    return OllamaEmbeddingProvider(
+        model=args.embedding_model, dimension=args.embedding_dimension,
+        endpoint=args.embedding_endpoint, timeout_seconds=args.embedding_timeout,
+        version=args.embedding_version,
+    )
+
+
+def _retrieval_scope(args):
+    from .domain.models import AuthorizedScope
+    return AuthorizedScope(
+        tenant_id=args.tenant, namespace=args.namespace, principal_id="local-cli"
+    )
+
+
+def _retrieval_command(args) -> int:
+    from .retrieval.contracts import RetrievalRequest
+    from .retrieval.engine import RetrievalEngine, RetrievalUnavailableError
+    from .storage.errors import StorageError, SchemaUpgradeRequiredError, RetrievalLimitError, EmbeddingSpaceError
+    from .providers import EmbeddingProviderError
+    from pydantic import ValidationError
+
+    try:
+        scope = _retrieval_scope(args)
+        provider = _retrieval_provider(args)
+        engine = RetrievalEngine(args.db, provider=provider)
+        if args.command == "memory" and args.memory_command == "index":
+            report = engine.index(
+                scope, batch_size=args.batch_size,
+                include_embeddings=provider is not None,
+            )
+            print(json.dumps(report.__dict__, ensure_ascii=False, separators=(",", ":")))
+            return 1 if report.embeddings_failed else 0
+        if args.command == "retrieval" and args.retrieval_command == "status":
+            status = engine.index_status(scope)
+            print(json.dumps(status.__dict__, ensure_ascii=False, separators=(",", ":")))
+            return 0
+        if args.command == "retrieve":
+            request = RetrievalRequest(
+                tenant_id=scope.tenant_id, namespace=scope.namespace,
+                query=args.query, mode=args.mode, max_results=args.max_results,
+                token_budget=args.token_budget, candidate_limit=args.candidate_limit,
+                min_semantic_similarity=args.min_semantic_similarity,
+                graph_depth=args.graph_depth, graph_nodes=args.graph_nodes,
+                graph_edges=args.graph_edges, graph_work=args.graph_work,
+                graph_relationships=tuple(args.graph_relationships) if args.graph_relationships else RetrievalRequest.model_fields["graph_relationships"].default,
+                known_at=args.known_at, valid_at=args.valid_at, as_of=args.as_of,
+                historical=args.historical, allow_degraded=args.allow_degraded,
+            )
+            response = engine.retrieve(scope, request)
+            result = response.model_dump(mode="json")
+            if not args.show_content:
+                result.pop("context_packet", None)
+                for memory in result["memories"]:
+                    memory.pop("canonical_content", None)
+            if args.json:
+                print(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
+            else:
+                print(
+                    f"Retrieval: {response.retrieval_id} mode={response.retrieval_mode.value} "
+                    f"memories={len(response.memories)} budget={response.estimated_token_count}/{response.token_budget} "
+                    f"method={response.counting_method}"
+                )
+                for memory in result["memories"]:
+                    print(json.dumps(memory, ensure_ascii=False, separators=(",", ":")))
+                if response.warnings:
+                    print("Warnings: " + ", ".join(response.warnings))
+            return 0
+    except (StorageError, EmbeddingProviderError, RetrievalUnavailableError, OSError, ValueError, TypeError) as error:
+        if isinstance(error, ValidationError):
+            hint = "Invalid retrieval options; check timestamps, limits and --help."
+        elif isinstance(error, SchemaUpgradeRequiredError):
+            hint = "Run oomp storage init --db PATH before retrieval."
+        elif isinstance(error, RetrievalLimitError):
+            hint = "A configured query, corpus or graph bound was exceeded."
+        elif isinstance(error, RetrievalUnavailableError):
+            hint = "The selected mode requires an explicit provider and complete compatible index."
+        elif isinstance(error, EmbeddingProviderError):
+            hint = "The opted-in local embedding service or model is unavailable or invalid."
+        elif isinstance(error, EmbeddingSpaceError):
+            hint = "The selected embedding space is unavailable or incomplete."
+        else:
+            hint = "Check scope, database path and command options."
+        print(f"Retrieval operation failed ({type(error).__name__}). {hint}", file=sys.stderr)
+        return 1
+    raise AssertionError("unknown retrieval command")
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="oomp",
@@ -174,6 +397,79 @@ def main(argv: list[str] | None = None) -> int:
     list_parser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
     list_parser.add_argument("--limit", type=int, default=100, metavar="N")
     list_parser.add_argument("--show-content", action="store_true", help="print canonical content for trusted local inspection")
+    index_parser = memory_commands.add_parser("index", help="index scoped canonical memories")
+    index_parser.add_argument("--tenant", required=True)
+    index_parser.add_argument("--namespace", required=True)
+    index_parser.add_argument("--db", metavar="PATH")
+    index_parser.add_argument("--batch-size", type=int, default=16)
+    retrieve_parser = subparsers.add_parser("retrieve", help="retrieve bounded source-attributed evidence")
+    retrieve_parser.add_argument("query")
+    retrieve_parser.add_argument("--tenant", required=True)
+    retrieve_parser.add_argument("--namespace", required=True)
+    retrieve_parser.add_argument("--db", metavar="PATH")
+    retrieve_parser.add_argument("--mode", choices=("lexical", "semantic", "hybrid"), default="lexical")
+    retrieve_parser.add_argument("--token-budget", type=int, default=1200)
+    retrieve_parser.add_argument("--max-results", type=int, default=8)
+    retrieve_parser.add_argument("--candidate-limit", type=int, default=40)
+    retrieve_parser.add_argument("--min-semantic-similarity", type=float, default=0.2)
+    retrieve_parser.add_argument("--graph-depth", type=int, default=1)
+    retrieve_parser.add_argument("--graph-nodes", type=int, default=16)
+    retrieve_parser.add_argument("--graph-edges", type=int, default=40)
+    retrieve_parser.add_argument("--graph-work", type=int, default=200)
+    retrieve_parser.add_argument("--graph-relationship", dest="graph_relationships", action="append", choices=("RELATED_TO", "ABOUT", "SUPPORTS", "DERIVED_FROM", "SUPERSEDES", "CONTRADICTS", "DEPENDS_ON"))
+    retrieve_parser.add_argument("--known-at", type=_graph_timestamp)
+    retrieve_parser.add_argument("--valid-at", type=_graph_timestamp)
+    retrieve_parser.add_argument("--as-of", type=_graph_timestamp)
+    retrieve_parser.add_argument("--historical", action="store_true")
+    retrieve_parser.add_argument("--allow-degraded", action="store_true")
+    retrieve_parser.add_argument("--show-content", action="store_true")
+    retrieve_parser.add_argument("--json", action="store_true")
+    retrieval_parser = subparsers.add_parser("retrieval", help="inspect scoped index completeness")
+    retrieval_commands = retrieval_parser.add_subparsers(dest="retrieval_command")
+    retrieval_status_parser = retrieval_commands.add_parser("status")
+    retrieval_status_parser.add_argument("--tenant", required=True)
+    retrieval_status_parser.add_argument("--namespace", required=True)
+    retrieval_status_parser.add_argument("--db", metavar="PATH")
+    for retr in (index_parser, retrieve_parser, retrieval_status_parser):
+        retr.add_argument("--embedding-provider", choices=("ollama",))
+        retr.add_argument("--embedding-model")
+        retr.add_argument("--embedding-version", default="ollama-api-embed-v1")
+        retr.add_argument("--embedding-dimension", type=int)
+        retr.add_argument("--embedding-endpoint", default="http://127.0.0.1:11434")
+        retr.add_argument("--embedding-timeout", type=float, default=15.0)
+    from .domain.enums import RelationshipType
+
+    graph_parser = subparsers.add_parser("graph", help="inspect and link local memory graph records")
+    graph_commands = graph_parser.add_subparsers(dest="graph_command")
+    link_parser = graph_commands.add_parser("link", help="link two existing memories with real source evidence")
+    link_parser.add_argument("--source", required=True, help="source memory ID")
+    link_parser.add_argument("--target", required=True, help="target memory ID")
+    link_parser.add_argument("--relationship", required=True, choices=[item.value for item in RelationshipType])
+    link_parser.add_argument("--event-id", dest="event_ids", action="append", required=True, help="supporting source event ID; repeat for two-event contradiction")
+    link_parser.add_argument("--valid-from", type=_graph_timestamp)
+    link_parser.add_argument("--valid-until", type=_graph_timestamp)
+    link_parser.add_argument("--confirm-resolution", action="store_true", help="explicitly commit a rederived protected relationship")
+    propose_parser = graph_commands.add_parser("propose", help="inspect a conservative conflict proposal without writing")
+    propose_parser.add_argument("--source", required=True, help="candidate newer/source memory ID")
+    propose_parser.add_argument("--target", required=True, help="candidate older/target memory ID")
+    propose_parser.add_argument("--source-event-id")
+    propose_parser.add_argument("--target-event-id")
+    neighbors_parser = graph_commands.add_parser("neighbors", help="list bounded adjacent edges")
+    neighbors_parser.add_argument("--memory-id", required=True)
+    neighbors_parser.add_argument("--direction", choices=("both", "incoming", "outgoing"), default="both")
+    neighbors_parser.add_argument("--limit", type=int, default=100)
+    history_parser = graph_commands.add_parser("history", help="inspect structural and temporal history")
+    history_parser.add_argument("--memory-id", required=True)
+    history_parser.add_argument("--valid-at", type=_graph_timestamp)
+    history_parser.add_argument("--known-at", type=_graph_timestamp)
+    topic_parser = graph_commands.add_parser("topic-tree", help="inspect a bounded topic projection")
+    topic_parser.add_argument("--root-topic-id", required=True)
+    topic_parser.add_argument("--max-depth", type=int, default=3)
+    topic_parser.add_argument("--max-nodes", type=int, default=100)
+    for graph_subparser in (link_parser, propose_parser, neighbors_parser, history_parser, topic_parser):
+        graph_subparser.add_argument("--tenant", required=True)
+        graph_subparser.add_argument("--namespace", required=True)
+        graph_subparser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
     args = parser.parse_args(argv)
     if args.command == "doctor":
         return doctor()
@@ -192,7 +488,21 @@ def main(argv: list[str] | None = None) -> int:
                 args.db, args.tenant, args.namespace,
                 limit=args.limit, show_content=args.show_content,
             )
+        if args.memory_command == "index":
+            return _retrieval_command(args)
         memory_parser.print_help()
         return 0
+    if args.command == "retrieve":
+        return _retrieval_command(args)
+    if args.command == "retrieval":
+        if args.retrieval_command == "status":
+            return _retrieval_command(args)
+        retrieval_parser.print_help()
+        return 0
+    if args.command == "graph":
+        if args.graph_command is None:
+            graph_parser.print_help()
+            return 0
+        return _graph_command(args)
     parser.print_help()
     return 0

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 4
 
 CREATE_EVENTS = """
 CREATE TABLE events (
@@ -128,7 +129,6 @@ MIGRATION_2: tuple[str, ...] = (
        ON memory_entities (tenant_id, namespace, entity_id, memory_id)""",
 )
 
-MIGRATIONS: dict[int, tuple[str, ...]] = {1: MIGRATION_1, 2: MIGRATION_2}
 
 
 def user_version(connection: sqlite3.Connection) -> int:
@@ -160,6 +160,15 @@ _V2_OBJECTS = {
     ("index", "memory_entities_entity"),
 }
 
+_V4_OBJECTS = {
+    ("table", "memory_fts_docs"), ("index", "memory_fts_docs_scope"),
+    ("table", "memory_fts"),
+    *(("table", f"memory_fts_{suffix}") for suffix in ("config", "content", "data", "docsize", "idx")),
+    ("trigger", "memories_fts_insert"),
+    ("table", "embedding_spaces"), ("table", "memory_embeddings"),
+    ("index", "memory_embeddings_space"),
+}
+
 
 def _objects(connection: sqlite3.Connection) -> dict[tuple[str, str], str]:
     return {
@@ -175,9 +184,9 @@ def _matches_sql(actual: dict[tuple[str, str], str], expected: dict[tuple[str, s
     return all(normalize(actual.get(key, "")) == normalize(sql) for key, sql in expected.items())
 
 
-def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False) -> bool:
+def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False, allow_v3: bool = False, allow_v4: bool = False) -> bool:
     actual = _objects(connection)
-    expected_keys = _V1_OBJECTS | (_V2_OBJECTS if allow_v2 else set())
+    expected_keys = _V1_OBJECTS | (_V2_OBJECTS if allow_v2 else set()) | (_V3_OBJECTS if allow_v3 else set()) | (_V4_OBJECTS if allow_v4 else set())
     if set(actual) != expected_keys:
         return False
     expected_sql = {
@@ -217,8 +226,8 @@ def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False) -> bool
     return True
 
 
-def verify_v2(connection: sqlite3.Connection) -> bool:
-    if not verify_v1(connection, allow_v2=True):
+def verify_v2(connection: sqlite3.Connection, *, allow_v3: bool = False, allow_v4: bool = False) -> bool:
+    if not verify_v1(connection, allow_v2=True, allow_v3=allow_v3, allow_v4=allow_v4):
         return False
     actual = _objects(connection)
     expected_sql = dict(zip(
@@ -237,3 +246,244 @@ def verify_v2(connection: sqlite3.Connection) -> bool:
         if not list(connection.execute(f"PRAGMA foreign_key_list({table})")):
             return False
     return True
+
+# Stage 4 adds graph assertions and independent system-observed recording times.
+# MIGRATION_1 and MIGRATION_2 intentionally remain byte-for-byte unchanged.
+MIGRATION_3: tuple[str, ...] = (
+    """CREATE TABLE graph_meta (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        history_start TEXT NOT NULL
+    )""",
+    """INSERT INTO graph_meta (id, history_start)
+       VALUES (1, oomp_recorded_at())""",
+    """CREATE TABLE memory_recordings (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, memory_id TEXT NOT NULL,
+        recorded_at TEXT,
+        PRIMARY KEY (tenant_id, namespace, memory_id),
+        FOREIGN KEY (tenant_id, namespace, memory_id)
+            REFERENCES memories (tenant_id, namespace, memory_id)
+    ) WITHOUT ROWID""",
+    """INSERT INTO memory_recordings (tenant_id, namespace, memory_id, recorded_at)
+       SELECT tenant_id, namespace, memory_id, NULL FROM memories""",
+    """CREATE TABLE memory_source_recordings (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL,
+        memory_id TEXT NOT NULL, event_id TEXT NOT NULL, recorded_at TEXT,
+        PRIMARY KEY (tenant_id, namespace, memory_id, event_id),
+        FOREIGN KEY (tenant_id, namespace, memory_id, event_id)
+            REFERENCES memory_sources (tenant_id, namespace, memory_id, event_id)
+    ) WITHOUT ROWID""",
+    """INSERT INTO memory_source_recordings
+       (tenant_id, namespace, memory_id, event_id, recorded_at)
+       SELECT tenant_id, namespace, memory_id, event_id, NULL FROM memory_sources""",
+    """CREATE TRIGGER memories_record_insert AFTER INSERT ON memories BEGIN
+       INSERT INTO memory_recordings (tenant_id, namespace, memory_id, recorded_at)
+       VALUES (NEW.tenant_id, NEW.namespace, NEW.memory_id,
+               oomp_recorded_at());
+       END""",
+    """CREATE TRIGGER memory_sources_record_insert AFTER INSERT ON memory_sources BEGIN
+       INSERT INTO memory_source_recordings
+           (tenant_id, namespace, memory_id, event_id, recorded_at)
+       VALUES (NEW.tenant_id, NEW.namespace, NEW.memory_id, NEW.event_id,
+               oomp_recorded_at());
+       END""",
+    """CREATE TABLE memory_edges (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, edge_id TEXT NOT NULL,
+        source_node_id TEXT NOT NULL, target_node_id TEXT NOT NULL,
+        relationship_type TEXT NOT NULL, logical_key TEXT NOT NULL,
+        confidence REAL, created_at TEXT NOT NULL, recorded_at TEXT NOT NULL,
+        recorded_by TEXT NOT NULL, valid_from TEXT, valid_until TEXT,
+        status TEXT NOT NULL, reason TEXT, policy_version TEXT,
+        payload_fingerprint TEXT NOT NULL CHECK (length(payload_fingerprint) = 64),
+        PRIMARY KEY (tenant_id, namespace, edge_id),
+        UNIQUE (tenant_id, namespace, logical_key),
+        FOREIGN KEY (tenant_id, namespace, source_node_id)
+            REFERENCES memories (tenant_id, namespace, memory_id),
+        FOREIGN KEY (tenant_id, namespace, target_node_id)
+            REFERENCES memories (tenant_id, namespace, memory_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX memory_edges_outgoing
+       ON memory_edges (tenant_id, namespace, source_node_id, relationship_type, recorded_at, edge_id)""",
+    """CREATE INDEX memory_edges_incoming
+       ON memory_edges (tenant_id, namespace, target_node_id, relationship_type, recorded_at, edge_id)""",
+    """CREATE INDEX memory_edges_chronological
+       ON memory_edges (tenant_id, namespace, recorded_at, edge_id)""",
+    """CREATE TABLE edge_evidence (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, edge_id TEXT NOT NULL,
+        event_id TEXT NOT NULL, ordinal INTEGER NOT NULL CHECK (ordinal >= 0),
+        recorded_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, namespace, edge_id, event_id),
+        UNIQUE (tenant_id, namespace, edge_id, ordinal),
+        FOREIGN KEY (tenant_id, namespace, edge_id)
+            REFERENCES memory_edges (tenant_id, namespace, edge_id),
+        FOREIGN KEY (tenant_id, namespace, event_id)
+            REFERENCES events (tenant_id, namespace, event_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX edge_evidence_event
+       ON edge_evidence (tenant_id, namespace, event_id, edge_id)""",
+    """CREATE TABLE topics (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, topic_id TEXT NOT NULL,
+        name TEXT NOT NULL CHECK (name <> ''), parent_id TEXT, recorded_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, namespace, topic_id),
+        FOREIGN KEY (tenant_id, namespace, parent_id)
+            REFERENCES topics (tenant_id, namespace, topic_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX topics_children
+       ON topics (tenant_id, namespace, parent_id, topic_id)""",
+    """CREATE TABLE topic_memberships (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL,
+        topic_id TEXT NOT NULL, memory_id TEXT NOT NULL, recorded_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, namespace, topic_id, memory_id),
+        FOREIGN KEY (tenant_id, namespace, topic_id)
+            REFERENCES topics (tenant_id, namespace, topic_id),
+        FOREIGN KEY (tenant_id, namespace, memory_id)
+            REFERENCES memories (tenant_id, namespace, memory_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX topic_memberships_memory
+       ON topic_memberships (tenant_id, namespace, memory_id, topic_id)""",
+    """CREATE TRIGGER memory_edges_no_update BEFORE UPDATE ON memory_edges BEGIN
+       SELECT RAISE(ABORT, 'graph edges are immutable');
+       END""",
+    """CREATE TRIGGER memory_edges_no_delete BEFORE DELETE ON memory_edges BEGIN
+       SELECT RAISE(ABORT, 'graph edges are immutable');
+       END""",
+    """CREATE TRIGGER edge_evidence_no_update BEFORE UPDATE ON edge_evidence BEGIN
+       SELECT RAISE(ABORT, 'edge evidence is immutable');
+       END""",
+    """CREATE TRIGGER edge_evidence_no_delete BEFORE DELETE ON edge_evidence BEGIN
+       SELECT RAISE(ABORT, 'edge evidence is immutable');
+       END""",
+)
+
+_V3_OBJECTS = {
+    ("table", "graph_meta"),
+    ("table", "memory_recordings"),
+    ("table", "memory_source_recordings"),
+    ("trigger", "memories_record_insert"),
+    ("trigger", "memory_sources_record_insert"),
+    ("table", "memory_edges"),
+    ("index", "memory_edges_outgoing"),
+    ("index", "memory_edges_incoming"),
+    ("index", "memory_edges_chronological"),
+    ("table", "edge_evidence"),
+    ("index", "edge_evidence_event"),
+    ("table", "topics"),
+    ("index", "topics_children"),
+    ("table", "topic_memberships"),
+    ("index", "topic_memberships_memory"),
+    ("trigger", "memory_edges_no_update"),
+    ("trigger", "memory_edges_no_delete"),
+    ("trigger", "edge_evidence_no_update"),
+    ("trigger", "edge_evidence_no_delete"),
+}
+
+
+def verify_v3(connection: sqlite3.Connection, *, allow_v4: bool = False) -> bool:
+    if not verify_v2(connection, allow_v3=True, allow_v4=allow_v4):
+        return False
+    keys = (
+        ("table", "graph_meta"), ("table", "memory_recordings"),
+        ("table", "memory_source_recordings"), ("trigger", "memories_record_insert"),
+        ("trigger", "memory_sources_record_insert"), ("table", "memory_edges"),
+        ("index", "memory_edges_outgoing"), ("index", "memory_edges_incoming"),
+        ("index", "memory_edges_chronological"), ("table", "edge_evidence"),
+        ("index", "edge_evidence_event"), ("table", "topics"),
+        ("index", "topics_children"), ("table", "topic_memberships"),
+        ("index", "topic_memberships_memory"), ("trigger", "memory_edges_no_update"),
+        ("trigger", "memory_edges_no_delete"), ("trigger", "edge_evidence_no_update"),
+        ("trigger", "edge_evidence_no_delete"),
+    )
+    statements = tuple(statement for statement in MIGRATION_3 if statement.lstrip().upper().startswith(("CREATE TABLE", "CREATE INDEX", "CREATE TRIGGER")))
+    if not _matches_sql(_objects(connection), dict(zip(keys, statements, strict=True))):
+        return False
+    for table in ("memory_recordings", "memory_source_recordings", "memory_edges",
+                  "edge_evidence", "topics", "topic_memberships"):
+        if not list(connection.execute(f"PRAGMA foreign_key_list({table})")):
+            return False
+    row = connection.execute("SELECT history_start FROM graph_meta WHERE id=1").fetchone()
+    if row is None or not isinstance(row[0], str) or len(row[0]) != 27:
+        return False
+    try:
+        return datetime.strptime(row[0], "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%dT%H:%M:%S.%fZ") == row[0]
+    except ValueError:
+        return False
+MIGRATION_4: tuple[str, ...] = (
+    """CREATE TABLE memory_fts_docs (
+        doc_id INTEGER PRIMARY KEY,
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, memory_id TEXT NOT NULL,
+        UNIQUE (tenant_id, namespace, memory_id),
+        FOREIGN KEY (tenant_id, namespace, memory_id)
+            REFERENCES memories (tenant_id, namespace, memory_id)
+    )""",
+    """CREATE INDEX memory_fts_docs_scope
+       ON memory_fts_docs (tenant_id, namespace, doc_id)""",
+    """CREATE VIRTUAL TABLE memory_fts USING fts5(
+        canonical_content, tokenize='unicode61')""",
+    """INSERT INTO memory_fts_docs (tenant_id, namespace, memory_id)
+       SELECT tenant_id, namespace, memory_id FROM memories
+       ORDER BY tenant_id, namespace, memory_id""",
+    """INSERT INTO memory_fts (rowid, canonical_content)
+       SELECT d.doc_id, m.canonical_content FROM memory_fts_docs d
+       JOIN memories m ON m.tenant_id=d.tenant_id
+                     AND m.namespace=d.namespace AND m.memory_id=d.memory_id""",
+    """CREATE TRIGGER memories_fts_insert AFTER INSERT ON memories BEGIN
+       INSERT INTO memory_fts_docs (tenant_id, namespace, memory_id)
+       VALUES (NEW.tenant_id, NEW.namespace, NEW.memory_id);
+       INSERT INTO memory_fts (rowid, canonical_content)
+       VALUES (last_insert_rowid(), NEW.canonical_content);
+       END""",
+    """CREATE TABLE embedding_spaces (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL,
+        provider TEXT NOT NULL, model TEXT NOT NULL, config_version TEXT NOT NULL,
+        dimension INTEGER NOT NULL CHECK (dimension BETWEEN 1 AND 4096),
+        PRIMARY KEY (tenant_id, namespace, provider, model, config_version)
+    ) WITHOUT ROWID""",
+    """CREATE TABLE memory_embeddings (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, memory_id TEXT NOT NULL,
+        provider TEXT NOT NULL, model TEXT NOT NULL, config_version TEXT NOT NULL,
+        dimension INTEGER NOT NULL CHECK (dimension BETWEEN 1 AND 4096),
+        content_digest TEXT NOT NULL CHECK (length(content_digest) = 64),
+        vector_blob BLOB NOT NULL, generated_at TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, namespace, memory_id, provider, model, config_version),
+        FOREIGN KEY (tenant_id, namespace, memory_id)
+            REFERENCES memories (tenant_id, namespace, memory_id),
+        FOREIGN KEY (tenant_id, namespace, provider, model, config_version)
+            REFERENCES embedding_spaces (tenant_id, namespace, provider, model, config_version)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX memory_embeddings_space
+       ON memory_embeddings (tenant_id, namespace, provider, model, config_version, memory_id)""",
+)
+
+
+def verify_v4(connection: sqlite3.Connection) -> bool:
+    if not verify_v3(connection, allow_v4=True):
+        return False
+    actual = _objects(connection)
+    keys = (
+        ("table", "memory_fts_docs"), ("index", "memory_fts_docs_scope"),
+        ("table", "memory_fts"), ("trigger", "memories_fts_insert"),
+        ("table", "embedding_spaces"), ("table", "memory_embeddings"),
+        ("index", "memory_embeddings_space"),
+    )
+    statements = tuple(statement for statement in MIGRATION_4 if statement.lstrip().upper().startswith(("CREATE TABLE", "CREATE INDEX", "CREATE VIRTUAL TABLE", "CREATE TRIGGER")))
+    if not _matches_sql(actual, dict(zip(keys, statements, strict=True))):
+        return False
+    for table in ("memory_fts_docs", "memory_embeddings"):
+        if not list(connection.execute(f"PRAGMA foreign_key_list({table})")):
+            return False
+    shadows = {
+        ("table", "memory_fts_config"): "CREATE TABLE 'memory_fts_config'(k PRIMARY KEY, v) WITHOUT ROWID",
+        ("table", "memory_fts_content"): "CREATE TABLE 'memory_fts_content'(id INTEGER PRIMARY KEY, c0)",
+        ("table", "memory_fts_data"): "CREATE TABLE 'memory_fts_data'(id INTEGER PRIMARY KEY, block BLOB)",
+        ("table", "memory_fts_docsize"): "CREATE TABLE 'memory_fts_docsize'(id INTEGER PRIMARY KEY, sz BLOB)",
+        ("table", "memory_fts_idx"): "CREATE TABLE 'memory_fts_idx'(segid, term, pgno, PRIMARY KEY(segid, term)) WITHOUT ROWID",
+    }
+    if not _matches_sql(actual, shadows):
+        return False
+    try:
+        connection.execute("SELECT rowid FROM memory_fts LIMIT 1").fetchone()
+    except sqlite3.Error:
+        return False
+    return True
+
+
+MIGRATIONS: dict[int, tuple[str, ...]] = {1: MIGRATION_1, 2: MIGRATION_2, 3: MIGRATION_3, 4: MIGRATION_4}

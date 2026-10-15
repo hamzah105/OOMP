@@ -35,3 +35,25 @@ __all__ = [
     "StorageBusyError", "StorageCorruptionError", "StorageError", "StorageStatus",
     "StorageUnavailableError", "StoredEventCorruptionError", "UnsupportedSchemaVersionError",
 ]
+from .graph_store import SQLiteGraphStore
+from .topic_store import SQLiteTopicStore
+from .errors import (
+    GraphConflictError, GraphLimitError, EdgeNotFoundError,
+    TopicConflictError, TopicNotFoundError, StoredGraphCorruptionError,
+)
+__all__ += [
+    "SQLiteGraphStore", "SQLiteTopicStore", "GraphConflictError",
+    "GraphLimitError", "EdgeNotFoundError", "TopicConflictError",
+    "TopicNotFoundError", "StoredGraphCorruptionError",
+]
+
+from .retrieval_store import (
+    SQLiteRetrievalStore, RetrievalReadSession, IndexStatus,
+    LexicalHit, SemanticHit, EntityHit, TopicHit, content_digest,
+)
+from .errors import FTSUnavailableError, RetrievalIndexError, RetrievalLimitError, EmbeddingSpaceError
+__all__ += [
+    "SQLiteRetrievalStore", "RetrievalReadSession", "IndexStatus",
+    "LexicalHit", "SemanticHit", "EntityHit", "TopicHit", "content_digest",
+    "FTSUnavailableError", "RetrievalIndexError", "RetrievalLimitError", "EmbeddingSpaceError",
+]

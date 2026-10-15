@@ -22,6 +22,7 @@ from .errors import (
     DatabaseMissingError,
     DatabaseUninitializedError,
     ForeignDatabaseError,
+    FTSUnavailableError,
     IdempotencyConflictError,
     ScopeMismatchError,
     StorageBusyError,
@@ -31,7 +32,7 @@ from .errors import (
     StoredEventCorruptionError,
     UnsupportedSchemaVersionError,
 )
-from .migrations import MIGRATIONS, SCHEMA_VERSION, is_empty_unowned_database, user_version, verify_v1, verify_v2
+from .migrations import MIGRATIONS, SCHEMA_VERSION, is_empty_unowned_database, user_version, verify_v1, verify_v2, verify_v3, verify_v4
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,15 @@ class StorageStatus:
 
 _EVENT_ID = TypeAdapter(Identifier)
 _F = TypeVar("_F", bound=Callable[..., Any])
+
+
+def _fts5_available() -> bool:
+    try:
+        with closing(sqlite3.connect(":memory:")) as probe:
+            probe.execute("CREATE VIRTUAL TABLE fts5_probe USING fts5(text)")
+        return True
+    except sqlite3.Error:
+        return False
 
 
 def _translate_sqlite_errors(method: _F) -> _F:
@@ -117,6 +127,12 @@ class SQLiteEventStore:
             uri, uri=True, isolation_level=None, timeout=self.busy_timeout_ms / 1000
         )
         try:
+            recorded_clock: list[str] = []
+            def recorded_at() -> str:
+                if not recorded_clock:
+                    recorded_clock.append(_timestamp(datetime.now(timezone.utc)))
+                return recorded_clock[0]
+            connection.create_function("oomp_recorded_at", 0, recorded_at)
             connection.row_factory = sqlite3.Row
             connection.execute(f"PRAGMA busy_timeout = {self.busy_timeout_ms}")
             connection.execute("PRAGMA foreign_keys = ON")
@@ -145,6 +161,10 @@ class SQLiteEventStore:
             raise StorageCorruptionError("SQLite event schema does not match version 1")
         if version == 2 and not verify_v2(connection):
             raise StorageCorruptionError("SQLite memory schema does not match version 2")
+        if version == 3 and not verify_v3(connection):
+            raise StorageCorruptionError("SQLite graph schema does not match version 3")
+        if version == 4 and not verify_v4(connection):
+            raise StorageCorruptionError("SQLite retrieval schema does not match version 4")
 
     @staticmethod
     def _set_wal_and_synchronous(connection: sqlite3.Connection) -> None:
@@ -153,6 +173,8 @@ class SQLiteEventStore:
 
     @_translate_sqlite_errors
     def initialize(self) -> int:
+        if not _fts5_available():
+            raise FTSUnavailableError("SQLite FTS5 is unavailable in this Python runtime")
         self.path.parent.mkdir(parents=True, exist_ok=True)
         mode = "rw" if self.path.exists() else "rwc"
         with closing(self._connect(mode)) as connection:
@@ -167,6 +189,10 @@ class SQLiteEventStore:
                 raise StorageCorruptionError("SQLite event schema does not match version 1")
             if version == 2 and not verify_v2(connection):
                 raise StorageCorruptionError("SQLite memory schema does not match version 2")
+            if version == 3 and not verify_v3(connection):
+                raise StorageCorruptionError("SQLite graph schema does not match version 3")
+            if version == 4 and not verify_v4(connection):
+                raise StorageCorruptionError("SQLite retrieval schema does not match version 4")
             self._set_wal_and_synchronous(connection)
             connection.execute("BEGIN IMMEDIATE")
             try:
@@ -181,6 +207,10 @@ class SQLiteEventStore:
                     raise StorageCorruptionError("SQLite event schema does not match version 1")
                 if version == 2 and not verify_v2(connection):
                     raise StorageCorruptionError("SQLite memory schema does not match version 2")
+                if version == 3 and not verify_v3(connection):
+                    raise StorageCorruptionError("SQLite graph schema does not match version 3")
+                if version == 4 and not verify_v4(connection):
+                    raise StorageCorruptionError("SQLite retrieval schema does not match version 4")
                 for target in range(version + 1, SCHEMA_VERSION + 1):
                     for statement in MIGRATIONS[target]:
                         connection.execute(statement)
@@ -189,6 +219,10 @@ class SQLiteEventStore:
                         raise StorageCorruptionError("SQLite event schema does not match version 1")
                     if target == 2 and not verify_v2(connection):
                         raise StorageCorruptionError("SQLite memory schema does not match version 2")
+                    if target == 3 and not verify_v3(connection):
+                        raise StorageCorruptionError("SQLite graph schema does not match version 3")
+                    if target == 4 and not verify_v4(connection):
+                        raise StorageCorruptionError("SQLite retrieval schema does not match version 4")
                 self._require_schema(connection)
                 connection.execute("COMMIT")
             except BaseException:
@@ -214,8 +248,18 @@ class SQLiteEventStore:
                 if version == 1:
                     if not verify_v1(connection):
                         return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
-                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 2 is needed")
-                if not verify_v2(connection):
+                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 4 is needed")
+                if version == 2:
+                    if not verify_v2(connection):
+                        return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
+                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 4 is needed")
+                if version == 3:
+                    if not verify_v3(connection):
+                        return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
+                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 4 is needed")
+                if not _fts5_available():
+                    return StorageStatus(self.path, True, True, version, journal, False, "SQLite FTS5 is unavailable")
+                if not verify_v4(connection):
                     return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
                 return StorageStatus(self.path, True, True, version, journal, True, "ready")
         except (sqlite3.Error, OSError, StorageError):
