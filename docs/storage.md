@@ -73,7 +73,7 @@ Use a local disk. SQLite WAL coordination requires processes on the same host an
 
 Use SQLite's online backup API or an established consistent snapshot while the database is active. Copying only the main file during WAL writes can omit committed transactions that remain in the WAL; do not independently discard a live WAL/SHM file. Stop writers and perform a coordinated checkpoint/copy if using offline file backups. A backup command is not implemented in this stage. [SQLite online backup](https://www.sqlite.org/backup.html).
 
-The database contains source text and metadata in plaintext. Tenant filtering protects service operations, not a person with direct filesystem/SQL access. Restrict file access and plan encryption/retention for deployment. Authorized privacy erasure must eventually remove protected content and dependent material from records, indexes, caches and backups; append-only correction is distinct from deletion. No erasure capability is claimed today.
+The database contains source text and metadata in plaintext. Tenant filtering protects service operations, not a person with direct filesystem/SQL access. Restrict file access and plan encryption/retention for deployment. Authorized privacy erasure must eventually remove protected content and dependent material from records, indexes, caches and backups; append-only correction is distinct from deletion. Stage 6 adds bounded privileged logical erasure; the physical/backup limitations below still apply.
 
 ## Windows commands
 
@@ -100,7 +100,7 @@ The first status intentionally reports missing/unready without creating a databa
 
 Chronological memory, reverse source and reverse entity indexes serve bounded lookups. These are entity associations, without graph-edge or vector tables. Foreign keys are enabled on each connection before transactions; composite references include both tenant and namespace. [SQLite foreign-key requirements](https://www.sqlite.org/foreignkeys.html).
 
-The Stage 3 migration path runs migrations 1 and 2 in one explicit transaction; current fresh initialization applies the complete 1–4 registry. A genuine version 1 database is structurally validated before upgrade; its event data, fingerprints, indexes and immutability triggers are preserved. Unsupported future/foreign/damaged schemas are rejected. A failed migration 2 leaves version 1 and its events intact. Repeated initialize is safe. Read-only status reports a valid version 1 database as needing an explicit upgrade; memory operations never initialize or migrate implicitly.
+The Stage 3 migration path runs migrations 1 and 2 in one explicit transaction; current fresh initialization applies the complete 1–5 registry. A genuine version 1 database is structurally validated before upgrade; its event data, fingerprints, indexes and immutability triggers are preserved. Unsupported future/foreign/damaged schemas are rejected. A failed migration 2 leaves version 1 and its events intact. Repeated initialize is safe. Read-only status reports a valid version 1 database as needing an explicit upgrade; memory operations never initialize or migrate implicitly.
 
 ## Memory and entity APIs
 
@@ -141,3 +141,13 @@ FTS5 BM25 statistics require a bounded authorized-scope temporary rank corpus. R
 
 
 The v4 additions are memory_fts_docs (scoped stable integer document mapping), memory_fts (FTS5 plus its five SQLite shadow tables), memories_fts_insert (transactional synchronization), embedding_spaces (scoped model/configuration dimension metadata), and memory_embeddings (scoped float64 vector blobs and digests). The mapping and vector tables use scoped foreign keys to canonical memories; vectors also reference their configured space. memory_fts_docs_scope and memory_embeddings_space support partitioned access. Rebuild/index operations never rewrite canonical bodies or event immutability triggers.
+
+## Stage 6 schema version 5
+
+Migration 5 is additive to genuine v4 and preserves the historical migration 1–4 definitions, event/graph immutability, canonical identities, provenance, FTS5 and compatible vectors. Explicit initialization verifies the exact supported schema; incompatible future/foreign/damaged schemas fail. Migration failure rolls back to the prior schema and data.
+
+The added structures store event outbox intake, scoped leased jobs and attempts, maintenance audits, dedicated summary revisions/proof, pending governed reviews, retraction history and scoped erasure tombstones. Appropriate pending/availability indexes support bounded scheduling. All authority remains in trusted services, with composite scope checks and foreign keys.
+
+Source insertion and intake are one transaction. Dispatch is atomic with durable job identity, and legacy backfill is explicit and bounded. Claims/renewal/acknowledgement use SQLite transactions and fencing; handlers reuse independently committing Stage 3/5 operations. The resulting guarantee is at-least-once work with idempotent effects.
+
+Erasure plans enumerate supported dependencies and confirmation rechecks that exact plan under a write lock. A constrained temporary delete-trigger bypass is restored before schema/FK verification and commit; rollback restores it on failure. Ordinary operations retain event immutability. Deleted sources cannot be reinserted under their tombstoned identity, and stale writes must revalidate live evidence. Unsupported dependency graphs fail closed. SQLite WAL/free pages, backups, snapshots and external copies require separate retention measures; logical deletion is not cryptographic secure deletion. [Operations and limits](background-mind.md).

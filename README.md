@@ -6,7 +6,7 @@ Potential uses include persistent project context, changing user preferences, do
 
 ## Current scope
 
-Stage 1 is implemented and acceptance-verified (79 tests passed). It includes validated domain and retrieval schemas, six replaceable component protocols, an offline diagnostic CLI, unit tests, and architectural, security and research documentation. Stage 2 adds a SQLite event store, scoped idempotent ingestion, chronological pages and storage diagnostics (acceptance verified: 120 total tests passed, including all original 79). Stage 3 acceptance passed: **192 tests**, including the original 120. It adds deterministic offline extraction, schema version 2 canonical-memory/entity persistence, scoped evidence deduplication, and synchronous atomic processing. Its validation results are recorded in [Stage 3 validation](docs/stage3-validation.md). Stage 4 acceptance passed: **226 total tests**, including all 192 prior cases. It adds a typed temporal graph, explicit topic projections, bounded structural traversal and conservative conflict governance; its results are recorded in [Stage 4 validation](docs/stage4-validation.md). Stage 5 acceptance passed: **279 total tests**, including all 226 prior cases. Stage 5 adds offline lexical retrieval, explicit local semantic/hybrid modes, derived SQLite v4 indexes and bounded evidence packing. Its implementation and validation are documented in [retrieval](docs/retrieval.md) and [Stage 5 validation](docs/stage5-validation.md). Background workers, MCP, TRACE integration, answer generation and dashboards remain future work. A token budget limits selected evidence; it does not enlarge an LLM's native context window.
+Stage 1 is implemented and acceptance-verified (79 tests passed). It includes validated domain and retrieval schemas, six replaceable component protocols, an offline diagnostic CLI, unit tests, and architectural, security and research documentation. Stage 2 adds a SQLite event store, scoped idempotent ingestion, chronological pages and storage diagnostics (acceptance verified: 120 total tests passed, including all original 79). Stage 3 acceptance passed: **192 tests**, including the original 120. It adds deterministic offline extraction, schema version 2 canonical-memory/entity persistence, scoped evidence deduplication, and synchronous atomic processing. Its validation results are recorded in [Stage 3 validation](docs/stage3-validation.md). Stage 4 acceptance passed: **226 total tests**, including all 192 prior cases. It adds a typed temporal graph, explicit topic projections, bounded structural traversal and conservative conflict governance; its results are recorded in [Stage 4 validation](docs/stage4-validation.md). Stage 5 acceptance passed: **279 total tests**, including all 226 prior cases. Stage 5 adds offline lexical retrieval, explicit local semantic/hybrid modes, derived SQLite v4 indexes and bounded evidence packing. Its implementation and validation are documented in [retrieval](docs/retrieval.md) and [Stage 5 validation](docs/stage5-validation.md). Stage 6 acceptance passed: **321 total tests**, including all 279 prior cases. It adds explicit durable workers, scoped outbox/jobs, versioned extractive summaries and local governance/privacy administration. Its results are recorded in [Stage 6 validation](docs/stage6-validation.md). MCP, TRACE integration, answer generation and dashboards remain future work. A token budget limits selected evidence; it does not enlarge an LLM's native context window.
 
 The Python import is `oomp`; local distribution metadata uses `oomp-memory` version `0.1.0`. This does not assert ownership or reservation of a PyPI name. OOMP does not import or modify TRACE.AI. Its eventual adapter belongs at an external integration boundary.
 
@@ -64,6 +64,14 @@ src/oomp/
         packing.py
     providers/
         ollama.py
+    mind/
+        cli.py
+        contracts.py
+        scheduler.py
+        worker.py
+        handlers.py
+        consolidation.py
+        governance.py
     ingestion/
         contracts.py
         extraction.py
@@ -83,6 +91,9 @@ src/oomp/
         graph_store.py
         topic_store.py
         retrieval_store.py
+        mind_store.py
+        mind_projection_store.py
+        privacy_store.py
 tests/
 docs/
 ```
@@ -113,6 +124,9 @@ Tests cover event/source consistency, provenance, identity validation, memory an
 - [Deterministic extraction, canonical identity and entity aliases](docs/extraction.md)
 - [Temporal graph, topics and conflict governance](docs/temporal-graph.md)
 - [Hybrid retrieval, indexing and evidence budgets](docs/retrieval.md)
+- [Background Mind Engine](docs/background-mind.md)
+- [Stage 6 validation](docs/stage6-validation.md)
+- [Complete Stage 6 report](docs/stage-6-report.md)
 - [Stage 5 validation](docs/stage5-validation.md)
 - [Complete Stage 5 report](docs/stage-5-report.md)
 - [Stage 4 validation](docs/stage4-validation.md)
@@ -191,3 +205,16 @@ The default retriever searches persisted canonical memories through real SQLite 
 ~~~
 
 The example compares an early project fact with a latest-eight-only view after more than 100 later synthetic events, then demonstrates synthetic vector mechanics, governed RAM history, graph relevance and whole-evidence budget drops. Synthetic vectors do not measure real semantic quality. The default UTF-8-byte counter measures the actual evidence JSON; the outer diagnostic response and host prompt overhead are separate. CLI content display requires --show-content. See [retrieval](docs/retrieval.md) for limits, optional Ollama setup and manual commands, and [validation](docs/stage5-validation.md) for actual executed results.
+
+## Stage 6 controlled background work
+
+Events enter a transactional SQLite outbox. An explicitly configured scoped worker dispatches durable jobs, reuses the existing extraction pipeline and maintains indexes. Leases, fencing, bounded retries and canonical/evidence idempotency support restart-safe at-least-once execution. Workers do not start on import. Embeddings remain opt-in; default operation needs no model, network service or GPU.
+
+Consolidation creates dedicated evidence-backed topic revisions without changing canonical facts. Background conflict inspection records reviews; protected relationships still require trusted confirmation through Stage 4. Corrections append new source events. Privileged local erasure requires a dependency plan and explicit confirmation, preserves independent evidence and rejects unsupported dependency cases.
+
+~~~powershell
+.\.venv\Scripts\python.exe examples\stage6_background_mind.py --db .\data\stage6-synthetic.sqlite3
+.\.venv\Scripts\oomp.exe mind --help
+~~~
+
+See [background behavior and privacy limits](docs/background-mind.md), [executed acceptance checks](docs/stage6-validation.md) and the [40-item Stage 6 report](docs/stage-6-report.md). Summary artifacts are inspected explicitly; Stage 5 retrieval continues to return canonical evidence.

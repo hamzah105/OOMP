@@ -16,7 +16,7 @@ from oomp.storage import (
     SQLiteGraphStore, SQLiteMemoryStore, SQLiteRetrievalStore, SQLiteTopicStore,
     StorageUnavailableError, UnsupportedSchemaVersionError,
 )
-from oomp.storage.migrations import MIGRATION_1, MIGRATION_2, MIGRATION_3, MIGRATION_4, verify_v3, verify_v4
+from oomp.storage.migrations import MIGRATION_1, MIGRATION_2, MIGRATION_3, MIGRATION_4, verify_v3, verify_v4, verify_v5
 from oomp.storage.retrieval_store import content_digest
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -93,11 +93,11 @@ def test_genuine_v3_graph_alias_topic_and_history_survive_v4(tmp_path):
         )}
     store = SQLiteRetrievalStore(path)
     assert store.status().schema_version == 3 and not store.status().ready
-    assert store.initialize() == 4
-    assert store.initialize() == 4
+    assert store.initialize() == 5
+    assert store.initialize() == 5
     assert store.status().ready
     with closing(sqlite3.connect(path)) as c:
-        assert verify_v4(c)
+        assert verify_v5(c)
         assert c.execute("PRAGMA foreign_key_check").fetchall() == []
         for name, rows in old.items():
             assert c.execute(f"SELECT * FROM {name} ORDER BY 1").fetchall() == rows
@@ -129,11 +129,11 @@ def test_failed_v4_migration_rolls_back_genuine_v3(tmp_path, monkeypatch):
 def test_future_version_rejected_and_fresh_v4_idempotent(tmp_path):
     path=tmp_path/"fresh.sqlite3"
     store=SQLiteEventStore(path)
-    assert store.initialize()==4
-    assert store.initialize()==4
+    assert store.initialize()==5
+    assert store.initialize()==5
     with closing(sqlite3.connect(path)) as c,c:
-        assert verify_v4(c)
-        c.execute("PRAGMA user_version=5")
+        assert verify_v5(c)
+        c.execute("PRAGMA user_version=6")
     with pytest.raises(UnsupportedSchemaVersionError):
         store.initialize()
 

@@ -32,7 +32,7 @@ Do not put credentials or secret configuration in event metadata by default. Met
 
 MCP transport credentials and the request's authenticated principal must be checked independently of requested memory scope. Streamable HTTP requires correct authentication/audience mapping, authorization, origin validation and local-first bind defaults. Stdio trusts the invoking process/environment and still needs explicit scope policy. Transport session identifiers are not durable memory keys or authorization tokens. Only the configured service may exercise storage authority; model proposals remain inputs to validation and policy.
 
-Stage 2 tests tenant/namespace event isolation, mismatched scopes/cursors, duplicate identity concurrency and safe storage diagnostics. Stages 4–5 add graph/vector/index isolation tests. Privileged erasure propagation and transport credentials remain future work.
+Stage 2 tests tenant/namespace event isolation, mismatched scopes/cursors, duplicate identity concurrency and safe storage diagnostics. Stages 4–5 add graph/vector/index isolation tests. Stage 6 adds constrained privileged local erasure; transport credentials remain future work.
 
 
 ## Implemented Stage 2 enforcement
@@ -65,7 +65,7 @@ Structural links are attributed trusted-caller assertions. Protected conflict/su
 
 Actual recording times are assigned by storage. Historical known_at views exclude later assertions and evidence; caller-supplied backdated timestamps cannot make later writes appear known earlier. Pre-v3 original recording times are unavailable and explicitly reported as such. This is auditable local history, not a trusted external time or cryptographic authenticity service.
 
-Graph/CLI output hides canonical content by default. IDs, edge metadata and topic names may still be sensitive. Local machine/filesystem access supplies CLI authority; a tenant argument is not remote authentication. Plaintext SQLite, administrator trust, limited secret scanning and absent encryption/erasure remain unchanged. No network dependency, MCP transport or TRACE integration is added.
+Graph/CLI output hides canonical content by default. IDs, edge metadata and topic names may still be sensitive. Local machine/filesystem access supplies CLI authority; a tenant argument is not remote authentication. Plaintext SQLite, administrator trust, limited secret scanning and absent encryption remain unchanged; Stage 6 adds a distinct constrained erasure path. No network dependency, MCP transport or TRACE integration is added.
 
 
 ## Stage 5 retrieval and optional local vectors
@@ -76,4 +76,16 @@ The optional Ollama transport is disabled unless deliberately constructed/config
 
 Memory bodies are untrusted data in a JSON evidence packet. IDs, source references, locators and graph metadata may also be sensitive. The CLI hides content by default, including JSON output, and exposes it only through --show-content. Provider failures and ordinary diagnostics must not echo query text, memory text or response bodies. Downstream hosts remain responsible for prompt construction, tool authority and their own complete prompt token budget.
 
-Derived vectors and FTS rows remain plaintext private data subject to any future retention/erasure policy. Fingerprints do not establish objective truth or administrator-resistant authenticity. No encryption, deletion propagation, remote authentication, MCP transport or TRACE integration is implemented by this milestone.
+Derived vectors and FTS rows remain plaintext private data subject to any future retention/erasure policy. Fingerprints do not establish objective truth or administrator-resistant authenticity. Stage 5 itself added no deletion propagation. Stage 6 adds scoped privileged logical erasure; encryption, remote authentication, MCP transport and TRACE integration remain outside the implemented boundary.
+
+## Stage 6 worker and privileged administration
+
+Worker scope and identity come from trusted operator configuration. Job payloads and provider responses cannot authorize a new scope, relationship approval or deletion. Jobs store IDs and restricted configuration; attempts and audits expose sanitized codes/counts. Content display is an explicit local inspection option. Identifiers and source references remain potentially sensitive.
+
+Protected conflict proposals require deliberate trusted confirmation and Stage 4 transactional revalidation. Corrections append source events. Retraction records withdrawal of endorsement without rewriting origin. Neither model output nor source instructions receive approval authority.
+
+Erasure requires an explicit scoped event target, nonmutating dependency plan and operator confirmation of that exact plan. Cleanup, job cancellation and tombstoning are transactional. Shared canonical records with independently valid surviving evidence are preserved. Unsupported dependencies fail closed. Ordinary event mutation triggers remain globally installed; a privileged bypass is confined to the erasure transaction and restored before commit.
+
+Source and memory existence are rechecked inside persistence transactions, preventing paused workers from recreating erased derivations. Dedicated summaries recheck their actual evidence. No source body, source-body digest or provider response is preserved in erasure audits. Logical deletion cannot remove physical remnants, backups, exports or data already returned to another process. Operators must enforce backup/export retention separately.
+
+These local administrative APIs are not safe remote tools merely because their inputs validate. Stage 7 must implement authentication, principal/scope mapping, privilege/approval policy and transport security before external exposure. [Detailed operational boundary](background-mind.md).

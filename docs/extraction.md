@@ -79,7 +79,7 @@ MemoryStore put/upsert and attach_evidence are trusted persistence operations, n
 
 ## Optional model status
 
-No Ollama, local inference transport, timeout/model configuration, cloud API or provider package is implemented. CandidateExtractor and strict MemoryCandidate are the provider-independent adapter interface. Tests use injected fake proposals without a live server. The pipeline currently permits only the same deterministic transformations, so a future model cannot expand supported semantics without an explicitly reviewed grounding policy. No weights are downloaded and no endpoint is configured by default.
+No model-based extraction adapter or summarizer is implemented. The separate optional Stage 5 local embedding adapter and its transport configuration do not expand extraction semantics. CandidateExtractor and strict MemoryCandidate are the provider-independent adapter interface. Tests use injected fake proposals without a live server. The pipeline currently permits only the same deterministic transformations, so a future model cannot expand supported semantics without an explicitly reviewed grounding policy. No weights are downloaded and no endpoint is configured by default.
 
 ## Manual use and Stage 4 handoff
 
@@ -99,3 +99,9 @@ Stage 4 must define semantic relationship persistence, endpoint/provenance valid
 Stage 4 uses existing canonical memories and their original source evidence; it does not expand these extraction rules. The temporal-graph example creates unsupported RAM memories through the documented trusted MemoryStore API with actual stored SourceReferences and explicit validity.
 
 Conservative conflict policy independently recognizes only its documented source-backed slot grammar. It does not accept arbitrary extraction/model metadata as a verified claim slot. Graph assertions and topic memberships preserve canonical memory IDs. [Temporal graph and governance](temporal-graph.md) describes the separate policy, confirmation and recording-time boundaries. Hybrid retrieval remains Stage 5.
+
+## Stage 6 scheduling
+
+Newly inserted events receive transactional outbox intake. An explicit scoped MindWorker calls this same ExtractionPipeline.process_event method; there is no second recognizer, relaxed provider-grounding policy or expanded grammar. Ineligible and zero-candidate events complete without fabricated output. Canonical/evidence uniqueness makes replay after a commit-before-acknowledgement crash safe.
+
+Existing synchronous memory commands continue to work. Extraction persistence resolves actual source events inside its write transaction, preventing a stale pre-erasure event snapshot from recreating derived records. Downstream maintenance uses versioned jobs and existing index APIs. [Background Mind Engine](background-mind.md).

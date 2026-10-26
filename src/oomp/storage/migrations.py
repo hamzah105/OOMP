@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 CREATE_EVENTS = """
 CREATE TABLE events (
@@ -184,9 +184,9 @@ def _matches_sql(actual: dict[tuple[str, str], str], expected: dict[tuple[str, s
     return all(normalize(actual.get(key, "")) == normalize(sql) for key, sql in expected.items())
 
 
-def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False, allow_v3: bool = False, allow_v4: bool = False) -> bool:
+def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False, allow_v3: bool = False, allow_v4: bool = False, allow_v5: bool = False) -> bool:
     actual = _objects(connection)
-    expected_keys = _V1_OBJECTS | (_V2_OBJECTS if allow_v2 else set()) | (_V3_OBJECTS if allow_v3 else set()) | (_V4_OBJECTS if allow_v4 else set())
+    expected_keys = _V1_OBJECTS | (_V2_OBJECTS if allow_v2 else set()) | (_V3_OBJECTS if allow_v3 else set()) | (_V4_OBJECTS if allow_v4 else set()) | (_V5_OBJECTS if allow_v5 else set())
     if set(actual) != expected_keys:
         return False
     expected_sql = {
@@ -226,8 +226,8 @@ def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False, allow_v
     return True
 
 
-def verify_v2(connection: sqlite3.Connection, *, allow_v3: bool = False, allow_v4: bool = False) -> bool:
-    if not verify_v1(connection, allow_v2=True, allow_v3=allow_v3, allow_v4=allow_v4):
+def verify_v2(connection: sqlite3.Connection, *, allow_v3: bool = False, allow_v4: bool = False, allow_v5: bool = False) -> bool:
+    if not verify_v1(connection, allow_v2=True, allow_v3=allow_v3, allow_v4=allow_v4, allow_v5=allow_v5):
         return False
     actual = _objects(connection)
     expected_sql = dict(zip(
@@ -377,8 +377,8 @@ _V3_OBJECTS = {
 }
 
 
-def verify_v3(connection: sqlite3.Connection, *, allow_v4: bool = False) -> bool:
-    if not verify_v2(connection, allow_v3=True, allow_v4=allow_v4):
+def verify_v3(connection: sqlite3.Connection, *, allow_v4: bool = False, allow_v5: bool = False) -> bool:
+    if not verify_v2(connection, allow_v3=True, allow_v4=allow_v4, allow_v5=allow_v5):
         return False
     keys = (
         ("table", "graph_meta"), ("table", "memory_recordings"),
@@ -454,8 +454,8 @@ MIGRATION_4: tuple[str, ...] = (
 )
 
 
-def verify_v4(connection: sqlite3.Connection) -> bool:
-    if not verify_v3(connection, allow_v4=True):
+def verify_v4(connection: sqlite3.Connection, *, allow_v5: bool = False) -> bool:
+    if not verify_v3(connection, allow_v4=True, allow_v5=allow_v5):
         return False
     actual = _objects(connection)
     keys = (
@@ -487,3 +487,192 @@ def verify_v4(connection: sqlite3.Connection) -> bool:
 
 
 MIGRATIONS: dict[int, tuple[str, ...]] = {1: MIGRATION_1, 2: MIGRATION_2, 3: MIGRATION_3, 4: MIGRATION_4}
+
+# Stage 6 adds durable intake, scoped jobs, projections and private erasure markers.
+# Historical migrations remain unchanged.
+MIGRATION_5: tuple[str, ...] = (
+    """CREATE TABLE mind_event_outbox (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, event_id TEXT NOT NULL,
+        inserted_at TEXT NOT NULL, dispatched_at TEXT,
+        PRIMARY KEY (tenant_id, namespace, event_id),
+        FOREIGN KEY (tenant_id, namespace, event_id)
+            REFERENCES events (tenant_id, namespace, event_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX mind_outbox_pending
+       ON mind_event_outbox (tenant_id, namespace, dispatched_at, inserted_at, event_id)""",
+    """CREATE TRIGGER events_mind_outbox_insert AFTER INSERT ON events BEGIN
+       INSERT INTO mind_event_outbox
+           (tenant_id, namespace, event_id, inserted_at)
+       VALUES (NEW.tenant_id, NEW.namespace, NEW.event_id, oomp_recorded_at());
+       END""",
+    """CREATE TABLE mind_erased_events (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, event_id TEXT NOT NULL,
+        idempotency_key TEXT, erased_at TEXT NOT NULL, operation_id TEXT NOT NULL,
+        operator_id TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, namespace, event_id)
+    ) WITHOUT ROWID""",
+    """CREATE UNIQUE INDEX mind_erased_event_keys
+       ON mind_erased_events (tenant_id, namespace, idempotency_key)
+       WHERE idempotency_key IS NOT NULL""",
+    """CREATE TRIGGER events_mind_erasure_guard BEFORE INSERT ON events
+       WHEN EXISTS (
+           SELECT 1 FROM mind_erased_events e
+           WHERE e.tenant_id=NEW.tenant_id AND e.namespace=NEW.namespace
+             AND (e.event_id=NEW.event_id OR
+                  (NEW.idempotency_key IS NOT NULL AND e.idempotency_key=NEW.idempotency_key))
+       ) BEGIN
+       SELECT RAISE(ABORT, 'erased source event cannot be reinserted');
+       END""",
+    """CREATE TABLE mind_jobs (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, job_id TEXT NOT NULL,
+        job_type TEXT NOT NULL, target_type TEXT NOT NULL, target_id TEXT NOT NULL,
+        idempotency_key TEXT NOT NULL, status TEXT NOT NULL
+            CHECK (status IN ('queued','running','retry_wait','completed','failed','cancelled')),
+        priority INTEGER NOT NULL CHECK (priority BETWEEN -100 AND 100),
+        attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+        max_attempts INTEGER NOT NULL CHECK (max_attempts BETWEEN 1 AND 20),
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL, available_at TEXT NOT NULL,
+        lease_owner TEXT, lease_expires_at TEXT,
+        fencing_token INTEGER NOT NULL DEFAULT 0 CHECK (fencing_token >= 0),
+        policy_version TEXT NOT NULL, config_json TEXT NOT NULL,
+        last_error_code TEXT,
+        PRIMARY KEY (tenant_id, namespace, job_id),
+        UNIQUE (tenant_id, namespace, idempotency_key),
+        CHECK ((lease_owner IS NULL) = (lease_expires_at IS NULL)),
+        CHECK ((status = 'running') = (lease_owner IS NOT NULL))
+    ) WITHOUT ROWID""",
+    """CREATE INDEX mind_jobs_ready
+       ON mind_jobs (tenant_id, namespace, status, available_at, priority DESC, job_id)""",
+    """CREATE INDEX mind_jobs_lease
+       ON mind_jobs (tenant_id, namespace, status, lease_expires_at, job_id)""",
+    """CREATE INDEX mind_jobs_target
+       ON mind_jobs (tenant_id, namespace, target_type, target_id, job_id)""",
+    """CREATE TABLE mind_job_attempts (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, job_id TEXT NOT NULL,
+        attempt_number INTEGER NOT NULL CHECK (attempt_number >= 1),
+        fencing_token INTEGER NOT NULL CHECK (fencing_token >= 1),
+        worker_id TEXT NOT NULL, started_at TEXT NOT NULL, ended_at TEXT,
+        status TEXT NOT NULL CHECK (status IN ('running','completed','retry_wait','failed','expired','cancelled')),
+        error_code TEXT,
+        PRIMARY KEY (tenant_id, namespace, job_id, attempt_number),
+        UNIQUE (tenant_id, namespace, job_id, fencing_token),
+        FOREIGN KEY (tenant_id, namespace, job_id)
+            REFERENCES mind_jobs (tenant_id, namespace, job_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX mind_attempts_worker
+       ON mind_job_attempts (tenant_id, namespace, worker_id, started_at, job_id)""",
+    """CREATE TABLE mind_maintenance_audit (
+        audit_id INTEGER PRIMARY KEY,
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL,
+        job_id TEXT, operation_type TEXT NOT NULL, policy_version TEXT NOT NULL,
+        actor_id TEXT NOT NULL, recorded_at TEXT NOT NULL,
+        status TEXT NOT NULL, error_code TEXT, affected_count INTEGER NOT NULL
+            CHECK (affected_count >= 0),
+        target_type TEXT, target_id TEXT,
+        FOREIGN KEY (tenant_id, namespace, job_id)
+            REFERENCES mind_jobs (tenant_id, namespace, job_id)
+    )""",
+    """CREATE INDEX mind_audit_scope
+       ON mind_maintenance_audit (tenant_id, namespace, recorded_at, audit_id)""",
+    """CREATE TABLE mind_summary_revisions (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL,
+        revision_id TEXT NOT NULL, topic_id TEXT NOT NULL,
+        revision_number INTEGER NOT NULL CHECK (revision_number >= 1),
+        content TEXT NOT NULL CHECK (content <> '' AND length(content) <= 4096),
+        source_fingerprint TEXT NOT NULL CHECK (length(source_fingerprint) = 64),
+        policy_version TEXT NOT NULL, recorded_at TEXT NOT NULL, retired_at TEXT,
+        PRIMARY KEY (tenant_id, namespace, revision_id),
+        UNIQUE (tenant_id, namespace, topic_id, revision_number),
+        FOREIGN KEY (tenant_id, namespace, topic_id)
+            REFERENCES topics (tenant_id, namespace, topic_id)
+    ) WITHOUT ROWID""",
+    """CREATE UNIQUE INDEX mind_summary_current
+       ON mind_summary_revisions (tenant_id, namespace, topic_id)
+       WHERE retired_at IS NULL""",
+    """CREATE TABLE mind_summary_sources (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL,
+        revision_id TEXT NOT NULL, memory_id TEXT NOT NULL, event_id TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, namespace, revision_id, memory_id, event_id),
+        FOREIGN KEY (tenant_id, namespace, revision_id)
+            REFERENCES mind_summary_revisions (tenant_id, namespace, revision_id),
+        FOREIGN KEY (tenant_id, namespace, memory_id, event_id)
+            REFERENCES memory_sources (tenant_id, namespace, memory_id, event_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX mind_summary_sources_memory
+       ON mind_summary_sources (tenant_id, namespace, memory_id, event_id, revision_id)""",
+    """CREATE TABLE mind_review_proposals (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL, proposal_id TEXT NOT NULL,
+        source_memory_id TEXT NOT NULL, target_memory_id TEXT NOT NULL,
+        relationship_type TEXT NOT NULL, source_event_ids_json TEXT NOT NULL,
+        reason TEXT NOT NULL, policy_version TEXT NOT NULL, status TEXT NOT NULL
+            CHECK (status IN ('pending','approved','rejected')),
+        recorded_at TEXT NOT NULL, decision_at TEXT, decided_by TEXT,
+        PRIMARY KEY (tenant_id, namespace, proposal_id),
+        FOREIGN KEY (tenant_id, namespace, source_memory_id)
+            REFERENCES memories (tenant_id, namespace, memory_id),
+        FOREIGN KEY (tenant_id, namespace, target_memory_id)
+            REFERENCES memories (tenant_id, namespace, memory_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX mind_reviews_pending
+       ON mind_review_proposals (tenant_id, namespace, status, recorded_at, proposal_id)""",
+    """CREATE TABLE mind_retractions (
+        tenant_id TEXT NOT NULL, namespace TEXT NOT NULL,
+        memory_id TEXT NOT NULL, event_id TEXT NOT NULL,
+        recorded_at TEXT NOT NULL, reason_code TEXT NOT NULL,
+        operator_id TEXT NOT NULL,
+        PRIMARY KEY (tenant_id, namespace, memory_id, event_id, recorded_at),
+        FOREIGN KEY (tenant_id, namespace, memory_id, event_id)
+            REFERENCES memory_sources (tenant_id, namespace, memory_id, event_id)
+    ) WITHOUT ROWID""",
+    """CREATE INDEX mind_retractions_memory
+       ON mind_retractions (tenant_id, namespace, memory_id, recorded_at, event_id)""",
+)
+
+
+_V5_OBJECTS = {
+    ("table", "mind_event_outbox"), ("index", "mind_outbox_pending"),
+    ("trigger", "events_mind_outbox_insert"),
+    ("table", "mind_erased_events"), ("index", "mind_erased_event_keys"),
+    ("trigger", "events_mind_erasure_guard"),
+    ("table", "mind_jobs"), ("index", "mind_jobs_ready"),
+    ("index", "mind_jobs_lease"), ("index", "mind_jobs_target"),
+    ("table", "mind_job_attempts"), ("index", "mind_attempts_worker"),
+    ("table", "mind_maintenance_audit"), ("index", "mind_audit_scope"),
+    ("table", "mind_summary_revisions"), ("index", "mind_summary_current"),
+    ("table", "mind_summary_sources"), ("index", "mind_summary_sources_memory"),
+    ("table", "mind_review_proposals"), ("index", "mind_reviews_pending"),
+    ("table", "mind_retractions"), ("index", "mind_retractions_memory"),
+}
+
+
+def verify_v5(connection: sqlite3.Connection) -> bool:
+    if not verify_v4(connection, allow_v5=True):
+        return False
+    actual = _objects(connection)
+    keys = (
+        ("table", "mind_event_outbox"), ("index", "mind_outbox_pending"),
+        ("trigger", "events_mind_outbox_insert"),
+        ("table", "mind_erased_events"), ("index", "mind_erased_event_keys"),
+        ("trigger", "events_mind_erasure_guard"),
+        ("table", "mind_jobs"), ("index", "mind_jobs_ready"),
+        ("index", "mind_jobs_lease"), ("index", "mind_jobs_target"),
+        ("table", "mind_job_attempts"), ("index", "mind_attempts_worker"),
+        ("table", "mind_maintenance_audit"), ("index", "mind_audit_scope"),
+        ("table", "mind_summary_revisions"), ("index", "mind_summary_current"),
+        ("table", "mind_summary_sources"), ("index", "mind_summary_sources_memory"),
+        ("table", "mind_review_proposals"), ("index", "mind_reviews_pending"),
+        ("table", "mind_retractions"), ("index", "mind_retractions_memory"),
+    )
+    statements = tuple(s for s in MIGRATION_5 if s.lstrip().upper().startswith(
+        ("CREATE TABLE", "CREATE INDEX", "CREATE UNIQUE INDEX", "CREATE TRIGGER")
+    ))
+    if not _matches_sql(actual, dict(zip(keys, statements, strict=True))):
+        return False
+    for table in ("mind_event_outbox", "mind_job_attempts", "mind_summary_revisions",
+                  "mind_summary_sources", "mind_review_proposals", "mind_retractions"):
+        if not list(connection.execute(f"PRAGMA foreign_key_list({table})")):
+            return False
+    return True
+
+
+MIGRATIONS[5] = MIGRATION_5

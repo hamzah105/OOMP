@@ -14,7 +14,7 @@ from oomp.domain.enums import MemoryStatus, RelationshipType
 from oomp.domain.interfaces import EmbeddingProvider as BaseEmbeddingProvider
 from oomp.domain.graph import TemporalQuery
 from oomp.domain.models import AuthorizedScope, RequestedScope
-from oomp.storage.errors import EmbeddingSpaceError, RetrievalLimitError, ScopeMismatchError
+from oomp.storage.errors import EmbeddingSpaceError, RetrievalLimitError, ScopeMismatchError, StorageBusyError
 from oomp.storage.retrieval_store import SQLiteRetrievalStore, content_digest
 
 from .contracts import (
@@ -59,6 +59,7 @@ class IndexReport:
     embeddings_skipped: int = 0
     embeddings_failed: int = 0
     warnings: tuple[str, ...] = ()
+    failure_code: str | None = None
 
 
 def _terms(value: str) -> frozenset[str]:
@@ -138,6 +139,7 @@ class RetrievalEngine:
         space = EmbeddingSpace.model_validate(self.provider.space.model_dump(mode="json"))
         indexed = skipped = failed = 0
         warnings: list[str] = []
+        failure_code = None
         cursor = None
         initial_count = self.store.index_status(authorized, space).canonical_count
         visited = 0
@@ -162,6 +164,13 @@ class RetrievalEngine:
                     skipped += existing
                 except Exception as error:
                     # Previously committed batches and lexical index remain intact.
+                    from oomp.providers.errors import EmbeddingProviderUnavailable
+                    failure_code = (
+                        "storage_busy" if isinstance(error, StorageBusyError) else
+                        "provider_unavailable"
+                        if isinstance(error, (EmbeddingProviderUnavailable, TimeoutError, ConnectionError))
+                        else "provider_invalid"
+                    )
                     failed += len(pending)
                     warnings.append("embedding_batch_failed:" + type(error).__name__)
                     break
@@ -172,7 +181,10 @@ class RetrievalEngine:
         if (visited < initial_count or final_status.compatible_embeddings != final_status.canonical_count
                 or final_status.stale_embeddings) and not failed:
             warnings.append("index_scan_incomplete")
-        return IndexReport(lexical_indexed, lexical_skipped, indexed, skipped, failed, tuple(warnings))
+        return IndexReport(
+            lexical_indexed, lexical_skipped, indexed, skipped, failed,
+            tuple(warnings), failure_code,
+        )
 
     def index_status(self, scope: AuthorizedScope):
         space = None if self.provider is None else self.provider.space

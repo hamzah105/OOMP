@@ -62,6 +62,82 @@ def _valid_at(start: datetime | None, end: datetime | None, instant: datetime | 
     return True
 
 
+def _source_retracted(
+    connection: sqlite3.Connection, scope: AuthorizedScope,
+    memory_id: str, event_id: str, known_at: datetime | None = None,
+) -> bool:
+    if user_version(connection) < 5:
+        return False
+    sql = """SELECT 1 FROM mind_retractions
+             WHERE tenant_id=? AND namespace=? AND memory_id=? AND event_id=?"""
+    args: list[object] = [scope.tenant_id, scope.namespace, memory_id, event_id]
+    if known_at is not None:
+        sql += " AND recorded_at<=?"
+        args.append(_timestamp(known_at))
+    sql += " LIMIT 1"
+    return connection.execute(sql, args).fetchone() is not None
+
+
+def _edge_endorsed(
+    connection: sqlite3.Connection, scope: AuthorizedScope,
+    record: EdgeRecord, known_at: datetime | None = None,
+) -> bool:
+    if user_version(connection) < 5:
+        return True
+    edge = record.edge
+
+    def linked_and_endorsed(memory_id: str, event_id: str) -> bool:
+        linked = connection.execute(
+            """SELECT 1 FROM memory_sources WHERE tenant_id=? AND namespace=?
+                 AND memory_id=? AND event_id=?""",
+            (scope.tenant_id, scope.namespace, memory_id, event_id),
+        ).fetchone()
+        return linked is not None and not _source_retracted(
+            connection, scope, memory_id, event_id, known_at,
+        )
+
+    def has_endorsed_source(memory_id: str) -> bool:
+        sql = """SELECT 1 FROM memory_sources s
+                 WHERE s.tenant_id=? AND s.namespace=? AND s.memory_id=?
+                   AND NOT EXISTS (
+                     SELECT 1 FROM mind_retractions r
+                     WHERE r.tenant_id=s.tenant_id AND r.namespace=s.namespace
+                       AND r.memory_id=s.memory_id AND r.event_id=s.event_id"""
+        args: list[object] = [scope.tenant_id, scope.namespace, memory_id]
+        if known_at is not None:
+            sql += " AND r.recorded_at<=?"
+            args.append(_timestamp(known_at))
+        sql += ") LIMIT 1"
+        return connection.execute(sql, args).fetchone() is not None
+
+    ids = edge.source_event_ids
+    if edge.relationship_type is RelationshipType.SUPERSEDES:
+        return (
+            len(ids) == 1
+            and linked_and_endorsed(edge.source_node_id, ids[0])
+            and has_endorsed_source(edge.target_node_id)
+        )
+    if edge.relationship_type is RelationshipType.CONTRADICTS:
+        return (
+            len(ids) == 2
+            and linked_and_endorsed(edge.source_node_id, ids[0])
+            and linked_and_endorsed(edge.target_node_id, ids[1])
+        )
+    for event_id in ids:
+        links = connection.execute(
+            """SELECT memory_id FROM memory_sources
+               WHERE tenant_id=? AND namespace=? AND event_id=?
+                 AND memory_id IN (?,?)""",
+            (scope.tenant_id, scope.namespace, event_id,
+             edge.source_node_id, edge.target_node_id),
+        ).fetchall()
+        if links and not any(
+            linked_and_endorsed(row["memory_id"], event_id) for row in links
+        ):
+            return False
+    return True
+
+
 class SQLiteGraphStore(SQLiteMemoryStore):
     """Immutable edge assertions over existing canonical memories."""
 
@@ -541,6 +617,7 @@ class SQLiteGraphStore(SQLiteMemoryStore):
         else:
             known = recorded <= query.known_at
         evidence: list[EdgeEvidence] = []
+        source_count = 0
         if known is True:
             sql = """SELECT s.event_id, r.recorded_at FROM memory_sources s
                      JOIN memory_source_recordings r
@@ -555,16 +632,22 @@ class SQLiteGraphStore(SQLiteMemoryStore):
             rows = connection.execute(sql, values).fetchall()
             if len(rows) > _MAX_EVIDENCE:
                 raise GraphLimitError("historical memory evidence limit exceeded")
+            source_count = len(rows)
             for item in rows:
+                if _source_retracted(
+                    connection, scope, memory_id, item["event_id"], query.known_at,
+                ):
+                    continue
                 source = _event_in_scope(connection, scope, item["event_id"])
                 evidence.append(EdgeEvidence(
                     event_id=source.event_id, source_reference=source.source_reference,
                     recorded_at=_TIME.validate_python(item["recorded_at"]) if item["recorded_at"] else None,
                 ))
-        if known is True and not evidence:
+        retracted_all = known is True and not evidence and source_count > 0
+        if known is True and not evidence and not retracted_all:
             known = None
         incoming = ()
-        if known is True:
+        if known is True and evidence:
             page = self._list_in_connection(
                 connection, scope, target_node_id=memory_id,
                 relationship_type=RelationshipType.SUPERSEDES,
@@ -572,7 +655,10 @@ class SQLiteGraphStore(SQLiteMemoryStore):
             )
             if page.next_cursor is not None:
                 raise GraphLimitError("supersession history exceeds complete bound")
-            incoming = page.edges
+            incoming = tuple(
+                record for record in page.edges
+                if _edge_endorsed(connection, scope, record, query.known_at)
+            )
             if len(evidence) + sum(len(item.evidence) for item in incoming) > _MAX_RESULT_EVIDENCE:
                 raise GraphLimitError("historical state evidence budget exceeded")
         applicable = []
@@ -585,7 +671,9 @@ class SQLiteGraphStore(SQLiteMemoryStore):
                 uncertain_supersession = True
         superseded = tuple(applicable)
         valid = _valid_at(start, end, query.valid_at) if known is True else None
-        effective_status = None if known is not True or (uncertain_supersession and not superseded) else (
+        effective_status = (
+            MemoryStatus.RETRACTED if retracted_all else
+            None if known is not True or (uncertain_supersession and not superseded) else
             MemoryStatus.SUPERSEDED if superseded else MemoryStatus(row["status"])
         )
         return MemoryState(
@@ -639,6 +727,70 @@ class SQLiteGraphStore(SQLiteMemoryStore):
             return GraphHistory(
                 memory=state, incoming_edges=incoming.edges, outgoing_edges=outgoing.edges
             )
+    def _apply_resolution_in_transaction(
+        self, connection: sqlite3.Connection, scope: AuthorizedScope,
+        proposal: ConflictProposal,
+    ) -> EdgeRecord:
+        authorized = _authorized(scope)
+        if not isinstance(proposal, ConflictProposal):
+            raise TypeError("a ConflictProposal is required")
+        incoming = ConflictProposal.model_validate(proposal.model_dump(mode="json"))
+        if (incoming.tenant_id, incoming.namespace) != (authorized.tenant_id, authorized.namespace):
+            raise ScopeMismatchError("proposal scope differs from authorized scope")
+        source_row = connection.execute(
+            "SELECT * FROM memories WHERE tenant_id=? AND namespace=? AND memory_id=?",
+            (authorized.tenant_id, authorized.namespace, incoming.source_node_id),
+        ).fetchone()
+        target_row = connection.execute(
+            "SELECT * FROM memories WHERE tenant_id=? AND namespace=? AND memory_id=?",
+            (authorized.tenant_id, authorized.namespace, incoming.target_node_id),
+        ).fetchone()
+        if source_row is None or target_row is None:
+            raise MemoryNotFoundError("resolution endpoint memory is missing")
+        source = self._read_memory(connection, authorized, source_row)
+        target = self._read_memory(connection, authorized, target_row)
+        source_event = _event_in_scope(connection, authorized, incoming.source_event_ids[0])
+        if _source_retracted(
+            connection, authorized, source.memory_id, source_event.event_id,
+        ):
+            raise GraphConflictError("resolution source evidence was retracted")
+        if source_event.event_id not in source.source_event_ids:
+            raise ProvenanceMismatchError("resolution source event is not linked to memory")
+        target_ids = (
+            incoming.source_event_ids[1:] if incoming.relationship_type is RelationshipType.CONTRADICTS
+            else target.source_event_ids
+        )
+        matched = False
+        for target_id in target_ids:
+            if target_id not in target.source_event_ids:
+                continue
+            if _source_retracted(
+                connection, authorized, target.memory_id, target_id,
+            ):
+                continue
+            target_event = _event_in_scope(connection, authorized, target_id)
+            assessment = propose_conflict(
+                authorized, source, target, source_event, target_event
+            )
+            if assessment.proposal == incoming:
+                matched = True
+                break
+        if not matched:
+            raise GraphConflictError("resolution is unsupported by current source evidence")
+        edge = MemoryEdge(
+            edge_id="edge-" + incoming.proposal_id,
+            tenant_id=authorized.tenant_id, namespace=authorized.namespace,
+            source_node_id=incoming.source_node_id,
+            target_node_id=incoming.target_node_id,
+            relationship_type=incoming.relationship_type,
+            source_event_ids=incoming.source_event_ids,
+            created_at=datetime.now(timezone.utc),
+            valid_from=incoming.valid_from, valid_until=incoming.valid_until,
+        )
+        return self._add_in_transaction(
+            connection, authorized, edge, protected=True,
+            reason=incoming.reason, policy_version=incoming.policy_version,
+        )
     @_translate_sqlite_errors
     def apply_resolution(
         self, scope: AuthorizedScope, proposal: ConflictProposal, *,
@@ -653,49 +805,4 @@ class SQLiteGraphStore(SQLiteMemoryStore):
         if (incoming.tenant_id, incoming.namespace) != (authorized.tenant_id, authorized.namespace):
             raise ScopeMismatchError("proposal scope differs from authorized scope")
         with self._graph_transaction() as connection:
-            source_row = connection.execute(
-                "SELECT * FROM memories WHERE tenant_id=? AND namespace=? AND memory_id=?",
-                (authorized.tenant_id, authorized.namespace, incoming.source_node_id),
-            ).fetchone()
-            target_row = connection.execute(
-                "SELECT * FROM memories WHERE tenant_id=? AND namespace=? AND memory_id=?",
-                (authorized.tenant_id, authorized.namespace, incoming.target_node_id),
-            ).fetchone()
-            if source_row is None or target_row is None:
-                raise MemoryNotFoundError("resolution endpoint memory is missing")
-            source = self._read_memory(connection, authorized, source_row)
-            target = self._read_memory(connection, authorized, target_row)
-            source_event = _event_in_scope(connection, authorized, incoming.source_event_ids[0])
-            if source_event.event_id not in source.source_event_ids:
-                raise ProvenanceMismatchError("resolution source event is not linked to memory")
-            target_ids = (
-                incoming.source_event_ids[1:] if incoming.relationship_type is RelationshipType.CONTRADICTS
-                else target.source_event_ids
-            )
-            matched = False
-            for target_id in target_ids:
-                if target_id not in target.source_event_ids:
-                    continue
-                target_event = _event_in_scope(connection, authorized, target_id)
-                assessment = propose_conflict(
-                    authorized, source, target, source_event, target_event
-                )
-                if assessment.proposal == incoming:
-                    matched = True
-                    break
-            if not matched:
-                raise GraphConflictError("resolution is unsupported by current source evidence")
-            edge = MemoryEdge(
-                edge_id="edge-" + incoming.proposal_id,
-                tenant_id=authorized.tenant_id, namespace=authorized.namespace,
-                source_node_id=incoming.source_node_id,
-                target_node_id=incoming.target_node_id,
-                relationship_type=incoming.relationship_type,
-                source_event_ids=incoming.source_event_ids,
-                created_at=datetime.now(timezone.utc),
-                valid_from=incoming.valid_from, valid_until=incoming.valid_until,
-            )
-            return self._add_in_transaction(
-                connection, authorized, edge, protected=True,
-                reason=incoming.reason, policy_version=incoming.policy_version,
-            )
+            return self._apply_resolution_in_transaction(connection, authorized, incoming)

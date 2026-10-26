@@ -1,5 +1,6 @@
 """Explicit opt-in local embedding adapters."""
 
-from .ollama import OllamaEmbeddingProvider, EmbeddingProviderError
+from .ollama import OllamaEmbeddingProvider
+from .errors import EmbeddingProviderError, EmbeddingProviderUnavailable
 
-__all__ = ["OllamaEmbeddingProvider", "EmbeddingProviderError"]
+__all__ = ["OllamaEmbeddingProvider", "EmbeddingProviderError", "EmbeddingProviderUnavailable"]

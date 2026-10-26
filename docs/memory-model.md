@@ -23,7 +23,7 @@ Source references describe external origin. OOMP `event_id` describes an interna
 
 Required: `event_id`, `tenant_id`, `namespace`, `event_type`, `source_type`, `content`, `source_reference`, `occurred_at`, `ingested_at`. Optional: `idempotency_key` (default null), `metadata` (default empty object).
 
-Content must be nonblank and at most 1,000,000 characters; its original spacing is preserved. Metadata must be a JSON object with string keys and JSON-compatible nested values, including null. Explicit metadata null, executable objects and NaN/infinity are rejected. Input containers are copied into immutable snapshots; mutating the caller's input cannot revise source evidence. This value-level protection is supplemented by Stage 2 append-only storage and UPDATE/DELETE triggers. Privileged erasure remains future work.
+Content must be nonblank and at most 1,000,000 characters; its original spacing is preserved. Metadata must be a JSON object with string keys and JSON-compatible nested values, including null. Explicit metadata null, executable objects and NaN/infinity are rejected. Input containers are copied into immutable snapshots; mutating the caller's input cannot revise source evidence. This value-level protection is supplemented by Stage 2 append-only storage and UPDATE/DELETE triggers. Stage 6 supplies a separate privileged local erasure path with dependency planning and confirmation.
 
 | EventType | Required SourceType |
 | --- | --- |
@@ -147,3 +147,11 @@ Conflict proposals are validated, provider-neutral values that grant no authorit
 RetrievalRequest keeps Stage 1 defaults and integer bounds, including token_budget=1. Stage 5 adds mode and explicit known_at/valid_at controls, resource limits and deliberate degraded-hybrid policy. as_of maps to reported validity, never system recording time. MemoryEvidence adds actual supporting event identities, selection reasons and temporal uncertainty without replacing canonical MemoryNode. Returned references use the eligible recording-time evidence projection, not unfiltered present-day provenance.
 
 RetrievalResponse carries real lane counts, mode/degradation warnings, estimated_token_count, token_budget, counting_method and the actual serialized context packet. Its evidence budget includes the complete packet wrappers/IDs/provenance/paths; outer diagnostics are separate. Empty evidence has a zero-length packet. Retrieval scores are deterministic ranking signals, not claim confidence or verification. Existing schema-only callers retain compatible defaults. [Exact behavior](retrieval.md).
+
+## Stage 6 job and projection values
+
+MindJob carries scoped identity, type/target, idempotency identity, status, attempt bounds, UTC availability/lease timestamps, owner/fencing token, versioned handler configuration and a sanitized error code. It references stored IDs rather than duplicating source bodies. Job scope is never authentication.
+
+Dedicated summary revisions reference actual topic memberships, canonical memory IDs and original event proof. They are not a second canonical MemoryNode representation and are not automatically added to Stage 5 retrieval. Revisions distinguish recorded knowledge from source validity; unchanged support does not create another revision.
+
+Retraction withdraws endorsement without editing source content. Surviving independent evidence remains available. Erasure is distinct and can remove historical projections containing private proof; ordinary history cannot reconstruct content that has been deliberately erased. [Background policy](background-mind.md).

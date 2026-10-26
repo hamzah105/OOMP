@@ -60,7 +60,7 @@ def edge(source, target, source_event, *, edge_id="edge-1", relation="RELATED_TO
 def graph(tmp_path):
     path = tmp_path / "graph.sqlite3"
     events, memories, links = SQLiteEventStore(path), SQLiteMemoryStore(path), SQLiteGraphStore(path)
-    assert events.initialize() == 4
+    assert events.initialize() == 5
     first, second = event("e1", content="First."), event("e2", content="Second.")
     for source in (first, second):
         events.append(scope(), source)
@@ -73,14 +73,14 @@ def graph(tmp_path):
 def test_fresh_schema_recording_triggers_and_restart(graph):
     events, memories, links, (left, right), (first, _) = graph
     with closing(sqlite3.connect(events.path)) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
         assert connection.execute("SELECT COUNT(*) FROM memory_recordings").fetchone()[0] == 2
         assert connection.execute("SELECT COUNT(*) FROM memory_source_recordings").fetchone()[0] == 2
     original = links.add_edge(scope(), edge(left, right, first))
     assert original.recorded_at == original.evidence[0].recorded_at
     assert SQLiteGraphStore(events.path).get_edge(scope(), original.edge.edge_id) == original
-    assert events.initialize() == 4
+    assert events.initialize() == 5
     with closing(sqlite3.connect(events.path)) as connection:
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute("UPDATE memory_edges SET status='retracted' WHERE edge_id='edge-1'")
@@ -154,12 +154,13 @@ def test_genuine_v2_with_memory_migrates_and_failed_upgrade_rolls_back(tmp_path,
         assert connection.execute("SELECT COUNT(*) FROM memories").fetchone()[0] == 1
         assert {table: connection.execute(f"SELECT * FROM {table}").fetchall() for table in tables} == before
     monkeypatch.setitem(migrations.MIGRATIONS, 3, MIGRATION_3)
-    assert old.initialize() == 4
+    assert old.initialize() == 5
     with closing(sqlite3.connect(path)) as connection:
         assert {table: connection.execute(f"SELECT * FROM {table}").fetchall() for table in tables} == before
-        assert connection.execute(
+        upgraded_triggers = dict(connection.execute(
             "SELECT name, sql FROM sqlite_master WHERE type='trigger' AND name GLOB 'events_*' ORDER BY name"
-        ).fetchall() == event_triggers
+        ).fetchall())
+        assert all(upgraded_triggers[name] == sql for name, sql in event_triggers)
     assert old.get(scope(), source.event_id) == source
     assert SQLiteMemoryStore(path).get(scope(), memory.memory_id) == memory
     assert SQLiteEntityStore(path).get(scope(), "entity-old").aliases == ("Object-Oriented Context Map",)

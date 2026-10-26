@@ -89,14 +89,14 @@ def test_fresh_initialization_version_wal_and_repeated_init_preserve_rows(tmp_pa
     path = tmp_path / "nested" / "events.db"
     store = SQLiteEventStore(path)
     assert not path.parent.exists()
-    assert store.initialize() == 4
+    assert store.initialize() == 5
     assert path.is_file()
     status = store.status()
     assert status.exists and status.accessible and status.ready
-    assert status.schema_version == 4
+    assert status.schema_version == 5
     assert status.journal_mode in {"wal", "delete", "truncate", "persist"}
     with closing(sqlite3.connect(path)) as connection, connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 4
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
         objects = {
             row[0] for row in connection.execute(
                 "SELECT name FROM sqlite_master WHERE name NOT GLOB 'sqlite_*'"
@@ -120,9 +120,17 @@ def test_fresh_initialization_version_wal_and_repeated_init_preserve_rows(tmp_pa
             "memory_fts_config", "memory_fts_content", "memory_fts_data",
             "memory_fts_docsize", "memory_fts_idx", "memories_fts_insert",
             "embedding_spaces", "memory_embeddings", "memory_embeddings_space",
+            "mind_event_outbox", "mind_outbox_pending", "events_mind_outbox_insert",
+            "mind_erased_events", "mind_erased_event_keys", "events_mind_erasure_guard",
+            "mind_jobs", "mind_jobs_ready", "mind_jobs_lease", "mind_jobs_target",
+            "mind_job_attempts", "mind_attempts_worker", "mind_maintenance_audit",
+            "mind_audit_scope", "mind_summary_revisions", "mind_summary_current",
+            "mind_summary_sources", "mind_summary_sources_memory",
+            "mind_review_proposals", "mind_reviews_pending",
+            "mind_retractions", "mind_retractions_memory",
         }
     stored = store.append(scope(), event())
-    assert store.initialize() == 4
+    assert store.initialize() == 5
     assert store.get(scope(), "event-1") == stored
     assert store.count_events(scope()) == 1
 
@@ -145,14 +153,14 @@ def test_negative_schema_version_is_invalid_without_initialize_mutation(tmp_path
 def test_future_unowned_and_structurally_damaged_schemas_fail_closed(tmp_path):
     future_path = tmp_path / "future.db"
     with closing(sqlite3.connect(future_path)) as connection, connection:
-        connection.execute("PRAGMA user_version=5")
+        connection.execute("PRAGMA user_version=6")
     future = SQLiteEventStore(future_path)
     status = future.status()
-    assert status.exists and status.accessible and status.schema_version == 5 and not status.ready
+    assert status.exists and status.accessible and status.schema_version == 6 and not status.ready
     with pytest.raises(UnsupportedSchemaVersionError):
         future.initialize()
     with closing(sqlite3.connect(future_path)) as connection, connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == 6
 
     foreign_path = tmp_path / "foreign.db"
     with closing(sqlite3.connect(foreign_path)) as connection, connection:
@@ -187,7 +195,7 @@ def test_failed_migration_rolls_back_schema_and_version(tmp_path, monkeypatch):
         ))
         assert names == []
     monkeypatch.setitem(migrations.MIGRATIONS, 1, MIGRATION_1)
-    assert SQLiteEventStore(path).initialize() == 4
+    assert SQLiteEventStore(path).initialize() == 5
 
 
 def test_reopen_preserves_complete_event_and_multiple_records(store):

@@ -157,3 +157,9 @@ Stage 5 consumes the graph through the same scoped read snapshot as lexical/enti
 Current reported retrieval follows governed replacement relationships; historical evidence remains available with its original source. Relevant unresolved contradictions remain alternatives rather than an automatic winner. Returned graph paths refer to actual visible, scoped edges and proof. Expansion has explicit depth/node/edge/work bounds and a relevance gate; structural adjacency alone does not add unrelated branches. Retrieval writes no relationships and cannot bypass Stage 4 confirmation/policy.
 
 Historical known_at requests disable the entity expansion lane because entity aliases and memory/entity associations lack a complete recording-time history. Topic/membership clocks are available and are filtered. This is an explicit conservative limitation rather than inferred historical identity. [Retrieval policy and limits](retrieval.md).
+
+## Stage 6 maintenance and endorsement
+
+The worker records bounded durable review proposals from the existing pure policy; it does not automatically insert protected CONTRADICTS or SUPERSEDES edges. Trusted approval must pass the existing confirmed resolution transaction. Unsupported semantic relationships remain unsupported; the extraction grammar is unchanged.
+
+Dedicated topic summary revisions use explicit memberships and real source proof. Their revision history does not fabricate SUPERSEDES edges and is inspected separately from canonical recall. Recording time governs known_at. Retraction invalidates affected support and projections while retaining original events. Privileged erasure can remove private historical proof and summaries; graph-dependent erasure cases that cannot be safely cleaned are rejected. [Background governance and privacy](background-mind.md).

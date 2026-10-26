@@ -70,11 +70,11 @@ The response exposes estimated_token_count, token_budget, counting_method and th
 
 max_results is an additional ceiling. If nothing fits, OOMP returns structured empty evidence. It does not fill gaps from general model knowledge. The packet is valid JSON when nonempty and treats content as untrusted data; a downstream model host still needs its own instruction and tool-authority boundary.
 
-## Explicit indexing and future background work
+## Explicit and background indexing
 
 Indexing is a deliberate local operation. It synchronizes lexical rows and optionally embeds bounded batches. Compatible unchanged digests are skipped. A malformed or failed provider batch preserves prior vectors and lexical data; counters and status expose failure and completeness. Embeddings may be incomplete after a partial multi-batch failure, so later semantic requests must check coverage.
 
-Stage 6 needs durable jobs, scoped cursors, retries, concurrency/backpressure, cancellation and recovery semantics, provider configuration pinning, stale-index policy and an explicit audit trail. None of that scheduler or autonomous consolidation is implemented here. MCP transport belongs to Stage 7, TRACE integration to Stage 8 and comparative benchmarking to Stage 9.
+Stage 6 supplies explicit scoped durable workers with retries, leases/fencing, backpressure, cancellation and audit. Its handlers reuse these index operations. Provider/model/version/dimension remain pinned; no configured provider means no embedding calls. MCP transport belongs to Stage 7, TRACE integration to Stage 8 and comparative benchmarking to Stage 9.
 
 See [storage](storage.md), [temporal graph](temporal-graph.md), [security](security-model.md), [validation](stage5-validation.md) and [completion report](stage-5-report.md). Exact command examples and limits follow.
 
@@ -116,3 +116,9 @@ After deliberate local embedding-model provisioning, the optional real-model acc
 ~~~
 
 These last commands are manual instructions, not claimed executed model results. Configure the dimension actually supported by the chosen model. Standard retrieval status reports compatible vector coverage only for the explicitly selected space; without a provider it does not aggregate incompatible model spaces or invoke a model.
+
+## Stage 6 projections and erasure
+
+Background extraction makes new canonical memories searchable through the existing transactional lexical trigger. Maintenance checks/repairs lexical state and optionally fills a deliberately configured compatible vector space. Provider outages preserve lexical search and earlier successful vectors; status must continue to report incomplete coverage.
+
+Dedicated topic summaries are not inserted as canonical memories or automatically packed by Stage 5 recall. Their explicit inspection has independent revision/provenance semantics. Retractions withdraw source endorsement without deleting historical events. Privileged erasure removes affected lexical/vector records and summary content before commit; future indexing reads surviving canonical records and cannot restore a deleted source. An already-open read snapshot or an external consumer may retain earlier data, which logical erasure cannot recall. [SQLite snapshot isolation](https://www.sqlite.org/isolation.html). [Background policy and operations](background-mind.md).

@@ -71,7 +71,7 @@ def hardware_memory(
 
 def run(path: Path) -> None:
     events = SQLiteEventStore(path)
-    assert events.initialize() == 4
+    assert events.initialize() == 5
     for source in (OLD_EVENT, NEW_EVENT, DISPUTED_EVENT, TOPIC_EVENT):
         assert events.append(SCOPE, source) == source
 

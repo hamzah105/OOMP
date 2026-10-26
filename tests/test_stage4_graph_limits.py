@@ -56,7 +56,7 @@ def edge(edge_id: str, target_id: str, evidence: tuple[str, ...]) -> MemoryEdge:
 def fixture(tmp_path: Path):
     path = tmp_path / "limits.sqlite3"
     events = SQLiteEventStore(path)
-    assert events.initialize() == 4
+    assert events.initialize() == 5
     first, second = source("proof-1"), source("proof-2")
     for item in (first, second):
         events.append(SCOPE, item)

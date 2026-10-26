@@ -56,7 +56,7 @@ class DeterministicTestProvider:
 
 def _project_database(path: Path):
     events = SQLiteEventStore(path)
-    assert events.initialize() == 4
+    assert events.initialize() == 5
     original = source_event("project-original", "I am developing a project called OOMP.")
     events.append(SCOPE, original)
     result = ExtractionPipeline(path).process_event(SCOPE, original.event_id)
@@ -166,7 +166,7 @@ def test_cli_index_status_and_strict_semantic_hint(tmp_path: Path, capsys):
 
 def _hardware(path: Path, *, old_end, new_end):
     events = SQLiteEventStore(path)
-    assert events.initialize() == 4
+    assert events.initialize() == 5
     old = source_event(
         "hardware-old", "My test computer has 4 GB RAM.",
         when=datetime(2026, 1, 5, tzinfo=timezone.utc),

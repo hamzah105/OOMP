@@ -41,7 +41,10 @@ def doctor() -> int:
         print("pydantic: not installed")
         healthy = False
 
-    for module in ("oomp.domain.models", "oomp.domain.interfaces", "oomp.retrieval.contracts"):
+    for module in (
+        "oomp.domain.models", "oomp.domain.interfaces", "oomp.retrieval.contracts",
+        "oomp.mind.worker", "oomp.storage.mind_projection_store", "oomp.storage.privacy_store",
+    ):
         try:
             importlib.import_module(module)
             print(f"{module}: import OK")
@@ -50,6 +53,7 @@ def doctor() -> int:
             healthy = False
 
     print(f"Stage 1 package readiness: {'OK' if healthy else 'FAILED'}")
+    print("Stage 6 worker: explicit execution only; database and provider not checked")
     return 0 if healthy else 1
 
 
@@ -437,6 +441,8 @@ def main(argv: list[str] | None = None) -> int:
         retr.add_argument("--embedding-dimension", type=int)
         retr.add_argument("--embedding-endpoint", default="http://127.0.0.1:11434")
         retr.add_argument("--embedding-timeout", type=float, default=15.0)
+    from .mind.cli import configure_mind_parser
+    configure_mind_parser(subparsers)
     from .domain.enums import RelationshipType
 
     graph_parser = subparsers.add_parser("graph", help="inspect and link local memory graph records")
@@ -473,6 +479,12 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "doctor":
         return doctor()
+    if args.command == "mind":
+        from .mind.cli import mind_command
+        if args.mind_command is None:
+            parser.parse_args(["mind", "--help"])
+            return 0
+        return mind_command(args)
     if args.command == "storage":
         if args.storage_command == "init":
             return storage_init(args.db)

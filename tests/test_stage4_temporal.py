@@ -54,7 +54,7 @@ def node(
 
 def setup_hardware(tmp_path: Path):
     database = tmp_path / "graph.sqlite3"
-    assert SQLiteEventStore(database).initialize() == 4
+    assert SQLiteEventStore(database).initialize() == 5
     old_event = event("event-old", "My test computer has 4 GB RAM.", SEP10)
     new_event = event("event-new", "I upgraded my test computer to 12 GB RAM.", OCT10)
     source_store = SQLiteEventStore(database)

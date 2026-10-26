@@ -157,6 +157,21 @@ class RetrievalReadSession:
         self._connection = connection
         self.scope = scope
 
+    def _currently_endorsed(self, memory_id: str) -> bool:
+        from .migrations import user_version
+        if user_version(self._connection) < 5:
+            return True
+        return self._connection.execute(
+            """SELECT 1 FROM memory_sources s
+               WHERE s.tenant_id=? AND s.namespace=? AND s.memory_id=?
+                 AND NOT EXISTS (
+                   SELECT 1 FROM mind_retractions r
+                   WHERE r.tenant_id=s.tenant_id AND r.namespace=s.namespace
+                     AND r.memory_id=s.memory_id AND r.event_id=s.event_id
+                 ) LIMIT 1""",
+            (self.scope.tenant_id, self.scope.namespace, memory_id),
+        ).fetchone() is not None
+
     def _scoped_documents(self, known_at: datetime | None) -> tuple[tuple[str, str], ...]:
         c = self._connection
         count, _ = _bounded_corpus(
@@ -177,14 +192,19 @@ class RetrievalReadSession:
         )
         result: list[tuple[str, str]] = []
         seen = 0
-        query = TemporalQuery(known_at=known_at) if known_at is not None else None
+        query = TemporalQuery(known_at=known_at)
         for row in rows:
             seen += 1
             if row["doc_id"] is None or row["indexed_content"] != row["canonical_content"]:
                 raise RetrievalIndexError("lexical index is stale or incomplete")
-            if query is not None:
-                state = self._store._memory_state_in_connection(c, self.scope, row["memory_id"], query)
-                if state.known is not True:
+            if known_at is None:
+                if not self._currently_endorsed(row["memory_id"]):
+                    continue
+            else:
+                state = self._store._memory_state_in_connection(
+                    c, self.scope, row["memory_id"], query,
+                )
+                if state.known is not True or not state.evidence:
                     continue
             result.append((row["memory_id"], row["canonical_content"]))
         if seen != count:
@@ -272,13 +292,18 @@ class RetrievalReadSession:
             (provider, model, version, self.scope.tenant_id, self.scope.namespace),
         )
         scored: list[tuple[str, float]] = []
-        temporal = TemporalQuery(known_at=known_at) if known_at is not None else None
+        temporal = TemporalQuery(known_at=known_at)
         seen = 0
         for row in rows:
             seen += 1
-            if temporal is not None:
-                state = self._store._memory_state_in_connection(c, self.scope, row["memory_id"], temporal)
-                if state.known is not True:
+            if known_at is None:
+                if not self._currently_endorsed(row["memory_id"]):
+                    continue
+            else:
+                state = self._store._memory_state_in_connection(
+                    c, self.scope, row["memory_id"], temporal,
+                )
+                if state.known is not True or not state.evidence:
                     continue
             if row["vector_blob"] is None:
                 raise EmbeddingSpaceError("embedding index is incomplete in authorized scope")
@@ -332,6 +357,11 @@ class RetrievalReadSession:
             if len(rows) > limit:
                 raise RetrievalLimitError("entity lookup exceeds complete result limit")
             for row in rows:
+                state = self._store._memory_state_in_connection(
+                    c, self.scope, row[0], TemporalQuery(),
+                )
+                if state.known is not True or not state.evidence:
+                    continue
                 hit = EntityHit(row[0], row[1], row[2])
                 found[(hit.memory_id, hit.entity_id)] = hit
             if len(found) > limit:
@@ -356,7 +386,7 @@ class RetrievalReadSession:
         if len(topics) > 500:
             raise RetrievalLimitError("scoped topic catalog exceeds lookup limit")
         found: dict[tuple[str, str], TopicHit] = {}
-        temporal = TemporalQuery(known_at=known_at) if known_at is not None else None
+        temporal = TemporalQuery(known_at=known_at)
         for topic in topics:
             if _normalize_name(topic["name"]) not in normalized:
                 continue
@@ -374,10 +404,11 @@ class RetrievalReadSession:
             if len(rows) > limit:
                 raise RetrievalLimitError("topic lookup exceeds complete result limit")
             for row in rows:
-                if temporal is not None:
-                    state = self._store._memory_state_in_connection(c,self.scope,row["memory_id"],temporal)
-                    if state.known is not True:
-                        continue
+                state = self._store._memory_state_in_connection(
+                    c, self.scope, row["memory_id"], temporal,
+                )
+                if state.known is not True or not state.evidence:
+                    continue
                 hit = TopicHit(row["memory_id"],topic["topic_id"],topic["name"])
                 found[(hit.memory_id,hit.topic_id)] = hit
             if len(found) > limit:
@@ -401,9 +432,14 @@ class RetrievalReadSession:
         known_at: datetime | None = None, limit: int = 100,
     ) -> tuple[EdgeRecord, ...]:
         _validate_limit(limit, 1000, "neighbor limit")
-        return self._store._neighbors_in_connection(
+        from .graph_store import _edge_endorsed
+        records = self._store._neighbors_in_connection(
             self._connection, self.scope, node_id, direction="both",
             allowed_relationships=allowed_relationships, limit=limit, known_at=known_at,
+        )
+        return tuple(
+            item for item in records
+            if _edge_endorsed(self._connection, self.scope, item, known_at)
         )
 
 

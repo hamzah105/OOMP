@@ -2,12 +2,14 @@
 
 ## Purpose and current boundary
 
-OOMP is an independent external memory library, not a chatbot or an application-specific conversation database. Its output is evidence, source references and retrieval metadata. Applications remain responsible for composing prompts and generating final answers. Stage 1 implements contracts and the package CLI; Stage 2 adds the SQLite source-event adapter. Stage 3 implements deterministic extraction and canonical-memory/entity persistence; Stage 4 implements the temporal associative graph and topic projections; Stage 5 implements budgeted retrieval and optional local embeddings; MCP remains planned.
+OOMP is an independent external memory library, not a chatbot or an application-specific conversation database. Its output is evidence, source references and retrieval metadata. Applications remain responsible for composing prompts and generating final answers. Stage 1 implements contracts and the package CLI; Stage 2 adds the SQLite source-event adapter. Stage 3 implements deterministic extraction and canonical-memory/entity persistence; Stage 4 implements the temporal associative graph and topic projections; Stage 5 implements budgeted retrieval and optional local embeddings; Stage 6 adds explicitly run durable maintenance; MCP remains planned.
 
 ```mermaid
 flowchart LR
     A[Authorized source events] --> B[SQLite event store: Stage 2]
-    B --> C[Validated deterministic extraction: Stage 3]
+    B --> O[Transactional outbox and scoped jobs: Stage 6]
+    O --> W[Explicit leased worker: Stage 6]
+    W --> C[Validated deterministic extraction: Stage 3]
     C --> D[Canonical memories and entity links: Stage 3]
     D --> E[Temporal associative graph and topics: Stage 4]
     D --> F[Derived lexical and vector indexes: Stage 5]
@@ -31,17 +33,17 @@ flowchart LR
 
 `domain.models` and `domain.enums` define validated values; `retrieval.contracts` defines the implemented retrieval request/response payloads. `domain.interfaces` defines EventStore, MemoryStore, GraphStore, EmbeddingProvider, MemoryExtractor and MemoryRetriever protocols. EventStore and MemoryStore have SQLite implementations, and deterministic MemoryExtractor implements the original pure extraction contract. Stage 3 orchestration validates candidate scope, evidence and allowed transformations before atomic persistence. Future authenticated services must issue authorized scopes before invoking these adapters.
 
-Protocols are synchronous in this stage to keep local boundaries small. Async service/transport adapters may be introduced later when actual I/O warrants them; no background execution or scheduling semantics are implied. Protocol conformance does not automatically enforce policy. Implementations must compare requested scope with authorized scope and verify object scope, endpoints and evidence references inside the authorized partition.
+Protocols are synchronous in this stage to keep local boundaries small. Async service/transport adapters may be introduced later when actual I/O warrants them; background execution is provided separately by the explicit Stage 6 worker. Protocol conformance does not automatically enforce policy. Implementations must compare requested scope with authorized scope and verify object scope, endpoints and evidence references inside the authorized partition.
 
 ## Storage versus indexes
 
-SQLite is the durable source for immutable events, canonical memories, evidence links, entities and explicit aliases. Schema version 2 adds these Stage 3 records to the original event table. Schema version 3 adds typed relationship assertions, source evidence, topics, memberships and recording-time history. Durable job state remains future work. Schema version 4 adds derived, replaceable lexical/vector indexes. Rebuilding an index must not change source identities or erase provenance. Namespace isolation applies to index lookups, caches, candidate selection and final evidence, not just a last response filter.
+SQLite is the durable source for immutable events, canonical memories, evidence links, entities and explicit aliases. Schema version 2 adds these Stage 3 records to the original event table. Schema version 3 adds typed relationship assertions, source evidence, topics, memberships and recording-time history. Schema version 5 adds durable intake, jobs and maintenance projections. Schema version 4 adds derived, replaceable lexical/vector indexes. Rebuilding an index must not change source identities or erase provenance. Namespace isolation applies to index lookups, caches, candidate selection and final evidence, not just a last response filter.
 
-Idempotency is scoped to tenant and namespace. The implemented append returns the original event for equivalent scoped retries and rejects conflicting ID/key reuse. Stage 2 implements transactions, schema version 1, scoped indexes and per-operation resource cleanup. Stage 3 adds derived-memory storage; privileged deletion remains future work. See the storage guide for exact fingerprint and retry semantics.
+Idempotency is scoped to tenant and namespace. The implemented append returns the original event for equivalent scoped retries and rejects conflicting ID/key reuse. Stage 2 implements transactions, schema version 1, scoped indexes and per-operation resource cleanup. Stage 3 adds derived-memory storage; Stage 6 adds a separate constrained local erasure workflow. See the storage guide for exact fingerprint and retry semantics.
 
-## Planned consolidation
+## Controlled consolidation
 
-The Stage 6 background engine may merge duplicate candidates, refine topic summaries and resolve stale derived state. It must operate on explicit authorized scope, preserve provenance, record which extraction/version produced changes, and remain resumable after failure. It must not manufacture verified truth from an assistant assertion or silently destroy earlier evidence.
+Stage 6 schedules existing extraction/index operations and conservative projection maintenance under explicit authorized scope. It preserves canonical identity, actual provenance and policy versions. Dedicated extractive summary revisions avoid unsupported protected edges between revisions. Conflict inspection creates review records; trusted confirmation still uses Stage 4 transactional policy. It does not merge different meanings or promote assistant assertions into verified truth. [Background Mind Engine](background-mind.md) defines leases, replay, retractions and privileged erasure.
 
 ## MCP and application boundaries
 
@@ -88,3 +90,9 @@ The retrieval engine owns planning, deterministic rank fusion, temporal relevanc
 Persistent FTS5 rows are backfilled and synchronized with canonical inserts. Ranking statistics come from a bounded per-scope temporary FTS5 corpus so another tenant cannot influence BM25 ranking. Scoped vectors are keyed by provider/model/configuration identity and validated dimension/content digest. Exact scans fail explicitly at capacity. Reads do not initialize, rebuild, embed memories or write conflict relationships.
 
 The model produces vectors or proposed intent; OOMP retains validation, policy, identity, approval, durability and execution. The optional Ollama adapter is explicit, loopback-only and disabled by default. The existing source-grounded conflict policy remains authoritative. The returned evidence packet counts its own JSON, provenance and paths under a disclosed counter; diagnostics and application prompt overhead require separate host accounting. See [retrieval](retrieval.md).
+
+## Stage 6 durability boundary
+
+SQLite owns outbox insertion, scoped job uniqueness, atomic claims, lease/fencing transitions and audit persistence. Worker dispatch receives one trusted AuthorizedScope; stored payload strings cannot expand it. Provider I/O stays outside write locks. Existing extraction/index effects and queue acknowledgement are separate commits, so replay is at least once with idempotent logical outputs.
+
+Summary revisions and reviews are projections over existing identities. Summaries are separate from canonical retrieval and revalidate live proof when written or presented as current. Retraction is an auditable endorsement overlay. Erasure uses a separate privileged plan/confirmation transaction, preserves ordinary source immutability and fails closed on unsupported dependencies. No remote forget tool, listener, MCP or TRACE integration is added.

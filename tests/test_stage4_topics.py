@@ -23,7 +23,7 @@ def scope(tenant="t", namespace="n"):
 def topics(tmp_path):
     path = tmp_path / "topics.sqlite3"
     events, memories, store = SQLiteEventStore(path), SQLiteMemoryStore(path), SQLiteTopicStore(path)
-    assert events.initialize() == 4
+    assert events.initialize() == 5
     ref = SourceReference(source_system="test", external_event_id="e1", timestamp=NOW)
     source = MemoryEvent(
         event_id="e1", tenant_id="t", namespace="n",

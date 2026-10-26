@@ -13,8 +13,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 from oomp.retrieval.contracts import EmbeddingSpace
 
 
-class EmbeddingProviderError(ValueError):
-    """A local provider failed or returned an invalid embedding payload."""
+from .errors import EmbeddingProviderError, EmbeddingProviderUnavailable
 
 
 class _NoRedirect(HTTPRedirectHandler):
@@ -81,12 +80,14 @@ class OllamaEmbeddingProvider:
         try:
             with self._opener.open(request, timeout=self.timeout_seconds) as response:
                 if response.status != 200:
-                    raise EmbeddingProviderError("local embedding service returned a non-success status")
+                    raise EmbeddingProviderUnavailable("local embedding service returned a temporary status")
                 raw = response.read(self.max_response_bytes + 1)
         except HTTPError as error:
+            if error.code in {408, 429} or 500 <= error.code <= 599:
+                raise EmbeddingProviderUnavailable("local embedding service is temporarily unavailable") from None
             raise EmbeddingProviderError(f"local embedding request failed (HTTP {error.code})") from None
         except (URLError, OSError, TimeoutError):
-            raise EmbeddingProviderError("local embedding service is unavailable") from None
+            raise EmbeddingProviderUnavailable("local embedding service is unavailable") from None
         if len(raw) > self.max_response_bytes:
             raise EmbeddingProviderError("local embedding response exceeds configured limit")
         try:
