@@ -2,7 +2,7 @@
 
 ## Purpose and current boundary
 
-OOMP is an independent external memory library, not a chatbot or an application-specific conversation database. Its output is evidence, source references and retrieval metadata. Applications remain responsible for composing prompts and generating final answers. Stage 1 implements contracts and the package CLI; Stage 2 adds the SQLite source-event adapter. Stage 3 implements deterministic extraction and canonical-memory/entity persistence; Stage 4 implements the temporal associative graph and topic projections; Stage 5 implements budgeted retrieval and optional local embeddings; Stage 6 adds explicitly run durable maintenance; MCP remains planned.
+OOMP is an independent external memory library, not a chatbot or an application-specific conversation database. Its output is evidence, source references and retrieval metadata. Applications remain responsible for composing prompts and generating final answers. Stage 1 implements contracts and the package CLI; Stage 2 adds the SQLite source-event adapter. Stage 3 implements deterministic extraction and canonical-memory/entity persistence; Stage 4 implements the temporal associative graph and topic projections; Stage 5 implements budgeted retrieval and optional local embeddings; Stage 6 adds explicitly run durable maintenance; Stage 7 adds the optional MCP boundary.
 
 ```mermaid
 flowchart LR
@@ -15,7 +15,7 @@ flowchart LR
     D --> F[Derived lexical and vector indexes: Stage 5]
     E --> G[Budgeted evidence retrieval: Stage 5]
     F --> G
-    G --> H[Application or MCP client: planned]
+    G --> H[Application or optional MCP client: Stage 7]
 ```
 
 ## Architectural contracts
@@ -33,7 +33,7 @@ flowchart LR
 
 `domain.models` and `domain.enums` define validated values; `retrieval.contracts` defines the implemented retrieval request/response payloads. `domain.interfaces` defines EventStore, MemoryStore, GraphStore, EmbeddingProvider, MemoryExtractor and MemoryRetriever protocols. EventStore and MemoryStore have SQLite implementations, and deterministic MemoryExtractor implements the original pure extraction contract. Stage 3 orchestration validates candidate scope, evidence and allowed transformations before atomic persistence. Future authenticated services must issue authorized scopes before invoking these adapters.
 
-Protocols are synchronous in this stage to keep local boundaries small. Async service/transport adapters may be introduced later when actual I/O warrants them; background execution is provided separately by the explicit Stage 6 worker. Protocol conformance does not automatically enforce policy. Implementations must compare requested scope with authorized scope and verify object scope, endpoints and evidence references inside the authorized partition.
+Protocols are synchronous in this stage to keep local boundaries small. The optional Stage 7 SDK adapter runs blocking services in bounded worker threads; background execution is provided separately by the explicit Stage 6 worker. Protocol conformance does not automatically enforce policy. Implementations must compare requested scope with authorized scope and verify object scope, endpoints and evidence references inside the authorized partition.
 
 ## Storage versus indexes
 
@@ -47,7 +47,7 @@ Stage 6 schedules existing extraction/index operations and conservative projecti
 
 ## MCP and application boundaries
 
-Stage 7 will use the official MCP Python SDK v2, exposing memory operations through stdio and stateless Streamable HTTP. As checked on 2026-10-13, the official SDK documents v2 as its stable line. No MCP package is installed in the OOMP environment. Revalidate the SDK and protocol requirements when building that adapter. [Official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
+Stage 7 uses official MCP Python SDK 2.3.0 (optional >=2.3.0,<2.4), verified on 2026-10-27, exposing memory operations through SDK stdio and stateless Streamable HTTP. Modern 2026-07-28 and SDK legacy HTTP client modes were tested. SDK types stay in the transport adapter. [Official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk).
 
 Authentication, authorization, input size limits, approval for privileged writes, server-side scope mapping, origin validation and safe binding belong to OOMP's service/transport boundary. MCP compatibility does not itself establish tenant authorization. Stdio inherits a local process trust boundary; HTTP requires explicit authenticated principals. Neither transport holds memory state.
 
@@ -95,4 +95,12 @@ The model produces vectors or proposed intent; OOMP retains validation, policy, 
 
 SQLite owns outbox insertion, scoped job uniqueness, atomic claims, lease/fencing transitions and audit persistence. Worker dispatch receives one trusted AuthorizedScope; stored payload strings cannot expand it. Provider I/O stays outside write locks. Existing extraction/index effects and queue acknowledgement are separate commits, so replay is at least once with idempotent logical outputs.
 
-Summary revisions and reviews are projections over existing identities. Summaries are separate from canonical retrieval and revalidate live proof when written or presented as current. Retraction is an auditable endorsement overlay. Erasure uses a separate privileged plan/confirmation transaction, preserves ordinary source immutability and fails closed on unsupported dependencies. No remote forget tool, listener, MCP or TRACE integration is added.
+Summary revisions and reviews are projections over existing identities. Summaries are separate from canonical retrieval and revalidate live proof when written or presented as current. Retraction is an auditable endorsement overlay. Erasure uses a separate privileged plan/confirmation transaction, preserves ordinary source immutability and fails closed on unsupported dependencies. Stage 6 added no remote forget tool or listener. Stage 7 supplies the separate local MCP listener; privacy administration remains local and TRACE is untouched.
+
+## Stage 7 adapter and authority
+
+The optional oomp.mcp package contains SDK-independent configuration/contracts/approval verification, a thin service adapter and the lazy SDK server/CLI boundary. Core domain, storage, extraction, retrieval and Mind modules import no MCP types. Pydantic-derived typed function signatures feed the official SDK tool registry; the subclass adds strict original-input validation, grant-specific discovery, private cache hints, capacity limits and static errors. It implements no JSON-RPC parser.
+
+HTTP uses official SDK bearer/auth-context middleware, wrapped by exact local Host/Origin/header controls. Lifespan reaches the SDK's own session manager directly; stateless requests do not become memory identity. Stdio uses an explicit invoking-process grant. Separate host signatures bind privileged ingest to exact evidence; no model tool can sign, erase, merge identities or approve conflicts.
+
+Stage 5 RetrievalEngine remains the only retrieval planner. Stage 4 traversal now has a reusable connection helper and optional TemporalQuery; MCP expansion uses it inside the existing retrieval read snapshot, projecting actual edge paths without an independent retrieval algorithm. Stage 6 adds scoped event_intake_status inspection for honest append/outbox/job replies. These are generic storage extensions, with no schema change or SDK dependency. No network connection initializes or rebuilds indexes. See [integration](mcp-integration.md) and [security](mcp-security.md).

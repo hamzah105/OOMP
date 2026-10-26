@@ -744,3 +744,27 @@ class SQLiteMindStore(SQLiteEventStore):
                    WHERE tenant_id=? AND namespace=? AND job_id=?""",
                 (scope.tenant_id,scope.namespace,job_id),
             ).fetchone()[0])
+    @_translate_sqlite_errors
+    def event_intake_status(self, scope: AuthorizedScope, event_id: str) -> dict[str, str | None]:
+        """Report durable intake and latest extraction job state, without claiming completion."""
+        authorized = _authorized(scope)
+        identifier = _IDENT.validate_python(event_id)
+        with self._read() as connection:
+            row = connection.execute(
+                """SELECT dispatched_at FROM mind_event_outbox
+                   WHERE tenant_id=? AND namespace=? AND event_id=?""",
+                (authorized.tenant_id, authorized.namespace, identifier),
+            ).fetchone()
+            if row is None:
+                raise ScopeMismatchError("intake target is absent from authorized scope")
+            job = connection.execute(
+                """SELECT status FROM mind_jobs
+                   WHERE tenant_id=? AND namespace=? AND target_type='event'
+                     AND target_id=? AND job_type='extract_event'
+                   ORDER BY updated_at DESC,job_id DESC LIMIT 1""",
+                (authorized.tenant_id, authorized.namespace, identifier),
+            ).fetchone()
+            return {
+                "outbox_state": "pending" if row["dispatched_at"] is None else "dispatched",
+                "latest_extraction_job_status": job[0] if job else None,
+            }

@@ -415,6 +415,26 @@ class RetrievalReadSession:
                 raise RetrievalLimitError("topic lookup exceeds complete result limit")
         return tuple(found[key] for key in sorted(found))
 
+    def traverse(
+        self, memory_id: str, *, max_depth: int, max_nodes: int,
+        allowed_relationships: tuple[RelationshipType, ...],
+        query: TemporalQuery,
+    ):
+        """Bounded temporal structural projection within this read snapshot."""
+        _validate_limit(max_nodes, 32, "projection node limit")
+        if type(max_depth) is not int or not 0 <= max_depth <= 2:
+            raise ValueError("projection depth must be 0 to 2")
+        from oomp.domain.models import Identifier
+        from pydantic import TypeAdapter
+        identifier = TypeAdapter(Identifier).validate_python(memory_id)
+        temporal = TemporalQuery.model_validate(query.model_dump(mode="json"))
+        return self._store._traverse_in_connection(
+            self._connection, self.scope, identifier,
+            max_depth=max_depth, max_nodes=max_nodes,
+            allowed_relationships=tuple(RelationshipType(r) for r in allowed_relationships),
+            query=temporal, max_edges=64, max_work=400, max_proof=1000,
+        )
+
     def memory(self, memory_id: str) -> MemoryNode | None:
         row = self._connection.execute(
             "SELECT * FROM memories WHERE tenant_id=? AND namespace=? AND memory_id=?",

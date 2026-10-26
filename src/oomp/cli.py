@@ -54,6 +54,13 @@ def doctor() -> int:
 
     print(f"Stage 1 package readiness: {'OK' if healthy else 'FAILED'}")
     print("Stage 6 worker: explicit execution only; database and provider not checked")
+    try:
+        mcp_version = importlib.metadata.version("mcp")
+        supported = bool(re.fullmatch(r"2\.3\.\d+", mcp_version))
+        print(f"Stage 7 MCP SDK: {mcp_version} ({'optional SDK ready' if supported else 'unsupported; requires >=2.3.0,<2.4'})")
+    except importlib.metadata.PackageNotFoundError:
+        print('Stage 7 MCP SDK: optional extra not installed; use pip install -e ".[mcp]"')
+    print("Stage 7 MCP server: explicit execution only; configuration and database not checked")
     return 0 if healthy else 1
 
 
@@ -476,7 +483,15 @@ def main(argv: list[str] | None = None) -> int:
         graph_subparser.add_argument("--tenant", required=True)
         graph_subparser.add_argument("--namespace", required=True)
         graph_subparser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
+    from .mcp.cli import configure_parser as configure_mcp_parser
+    mcp_parser = configure_mcp_parser(subparsers)
     args = parser.parse_args(argv)
+    if args.command == "mcp":
+        if args.mcp_command is None:
+            mcp_parser.print_help()
+            return 0
+        from .mcp.cli import mcp_command
+        return mcp_command(args)
     if args.command == "doctor":
         return doctor()
     if args.command == "mind":

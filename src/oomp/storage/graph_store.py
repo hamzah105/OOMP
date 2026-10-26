@@ -527,6 +527,7 @@ class SQLiteGraphStore(SQLiteMemoryStore):
         self, scope: AuthorizedScope, node_id: str, *, max_depth: int = 2,
         max_nodes: int = 100,
         allowed_relationships: tuple[RelationshipType, ...] | None = None,
+        query: TemporalQuery | None = None,
     ) -> TraversalResult:
         authorized = _authorized(scope)
         identifier = _ID.validate_python(node_id)
@@ -535,61 +536,112 @@ class SQLiteGraphStore(SQLiteMemoryStore):
         if type(max_nodes) is not int or not 1 <= max_nodes <= 500:
             raise ValueError("max_nodes must be an integer from 1 to 500")
         relations = None if allowed_relationships is None else tuple(RelationshipType(item) for item in allowed_relationships)
+        temporal = None
+        if query is not None:
+            if not isinstance(query, TemporalQuery):
+                raise TypeError("a TemporalQuery is required")
+            temporal = TemporalQuery.model_validate(query.model_dump(mode="json"))
         with self._graph_read() as connection:
-            if not self._exists_memory(connection, authorized, identifier):
-                raise MemoryNotFoundError("graph memory is missing")
-            visited = {identifier}
-            ordered = [identifier]
-            edge_records: dict[str, EdgeRecord] = {}
-            frontier = deque([(identifier, 0)])
-            work = 0
-            proof_count = 0
-            truncated = False
-            while frontier:
-                current, depth = frontier.popleft()
+            return self._traverse_in_connection(
+                connection, authorized, identifier, max_depth=max_depth,
+                max_nodes=max_nodes, allowed_relationships=relations, query=temporal,
+            )
+
+    def _traverse_in_connection(
+        self, connection: sqlite3.Connection, scope: AuthorizedScope, identifier: str, *,
+        max_depth: int, max_nodes: int,
+        allowed_relationships: tuple[RelationshipType, ...] | None = None,
+        query: TemporalQuery | None = None, max_edges: int = 2000,
+        max_work: int = 10000, max_proof: int = _MAX_RESULT_EVIDENCE,
+    ) -> TraversalResult:
+        """Existing structural traversal, optionally projected in the caller's snapshot."""
+        if not self._exists_memory(connection, scope, identifier):
+            raise MemoryNotFoundError("graph memory is missing")
+        eligibility: dict[str, bool] = {}
+
+        def eligible(node_id: str) -> bool:
+            if query is None:
+                return True
+            if node_id not in eligibility:
+                state = self._memory_state_in_connection(connection, scope, node_id, query)
+                eligibility[node_id] = (
+                    state.known is True and bool(state.evidence) and state.valid is not False
+                    and state.effective_status is not MemoryStatus.RETRACTED
+                )
+            return eligibility[node_id]
+
+        def visible(record: EdgeRecord) -> bool:
+            if query is None:
+                return True
+            return (
+                _edge_endorsed(connection, scope, record, query.known_at)
+                and _valid_at(record.edge.valid_from, record.edge.valid_until, query.valid_at) is not False
+            )
+
+        if not eligible(identifier):
+            raise MemoryNotFoundError("graph memory is unavailable at the requested time")
+        visited = {identifier}
+        ordered = [identifier]
+        edge_records: dict[str, EdgeRecord] = {}
+        frontier = deque([(identifier, 0)])
+        work = proof_count = 0
+        truncated = False
+        while frontier:
+            current, depth = frontier.popleft()
+            if depth >= max_depth and query is None:
+                rows = connection.execute(
+                    """SELECT source_node_id, target_node_id FROM memory_edges
+                       WHERE tenant_id=? AND namespace=?
+                         AND (source_node_id=? OR target_node_id=?) LIMIT 1001""",
+                    (scope.tenant_id, scope.namespace, current, current),
+                ).fetchall()
+                if len(rows) > 1000:
+                    raise GraphLimitError("graph depth frontier fanout exceeded")
+                if any((row[1] if row[0] == current else row[0]) not in visited for row in rows):
+                    truncated = True
+                continue
+            remaining = max_work - work
+            if remaining <= 0:
+                raise GraphLimitError("graph traversal work budget exceeded")
+            neighbors = self._neighbors_in_connection(
+                connection, scope, current, direction="both",
+                allowed_relationships=allowed_relationships,
+                known_at=query.known_at if query else None,
+                limit=min(1000, remaining),
+            )
+            work += len(neighbors)
+            if work > max_work:
+                raise GraphLimitError("graph traversal work budget exceeded")
+            for record in neighbors:
+                if not visible(record):
+                    continue
+                other = record.edge.target_node_id if record.edge.source_node_id == current else record.edge.source_node_id
+                if not eligible(other):
+                    continue
                 if depth >= max_depth:
-                    rows = connection.execute(
-                        """SELECT source_node_id, target_node_id FROM memory_edges
-                           WHERE tenant_id=? AND namespace=?
-                             AND (source_node_id=? OR target_node_id=?) LIMIT 1001""",
-                        (authorized.tenant_id, authorized.namespace, current, current),
-                    ).fetchall()
-                    if len(rows) > 1000:
-                        raise GraphLimitError("graph depth frontier fanout exceeded")
-                    if any((row[1] if row[0] == current else row[0]) not in visited for row in rows):
+                    if other not in visited:
                         truncated = True
                     continue
-                neighbors = self._neighbors_in_connection(
-                    connection, authorized, current, direction="both",
-                    allowed_relationships=relations, limit=1000,
-                )
-                work += len(neighbors)
-                if work > 10000:
-                    raise GraphLimitError("graph traversal work budget exceeded")
-                for record in neighbors:
-                    other = (
-                        record.edge.target_node_id if record.edge.source_node_id == current
-                        else record.edge.source_node_id
-                    )
-                    if other not in visited and len(visited) >= max_nodes:
-                        truncated = True
-                        continue
-                    if record.edge.edge_id not in edge_records:
-                        proof_count += len(record.evidence)
-                        if proof_count > _MAX_RESULT_EVIDENCE:
-                            raise GraphLimitError("graph traversal evidence budget exceeded")
-                        edge_records[record.edge.edge_id] = record
-                    if len(edge_records) > 2000:
-                        raise GraphLimitError("graph traversal edge budget exceeded")
-                    if other in visited:
-                        continue
-                    visited.add(other)
-                    ordered.append(other)
-                    frontier.append((other, depth + 1))
-            return TraversalResult(
-                start_node_id=identifier, node_ids=tuple(ordered),
-                edges=tuple(edge_records.values()), truncated=truncated,
-            )
+                if other not in visited and len(visited) >= max_nodes:
+                    truncated = True
+                    continue
+                if record.edge.edge_id not in edge_records:
+                    proof_count += len(record.evidence)
+                    if proof_count > max_proof:
+                        raise GraphLimitError("graph traversal evidence budget exceeded")
+                    edge_records[record.edge.edge_id] = record
+                if len(edge_records) > max_edges:
+                    raise GraphLimitError("graph traversal edge budget exceeded")
+                if other in visited:
+                    continue
+                visited.add(other)
+                ordered.append(other)
+                frontier.append((other, depth + 1))
+        return TraversalResult(
+            start_node_id=identifier, node_ids=tuple(ordered),
+            edges=tuple(edge_records.values()), truncated=truncated,
+        )
+
     def _memory_state_in_connection(
         self, connection: sqlite3.Connection, scope: AuthorizedScope,
         memory_id: str, query: TemporalQuery,

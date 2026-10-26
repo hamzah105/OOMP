@@ -28,11 +28,11 @@ Keep source events immutable during ordinary corrections. Append a correction an
 
 Do not put credentials or secret configuration in event metadata by default. Metadata is finite JSON, not executable objects. Unknown schema fields are rejected; future adapters must enforce payload limits and retention. Diagnostic output must avoid dumping memory text or secrets. `.gitignore` excludes local databases, indexes, environments, logs and common secrets, but ignore rules are not access control or a guarantee against disclosure.
 
-## Future MCP assumptions
+## MCP boundary
 
 MCP transport credentials and the request's authenticated principal must be checked independently of requested memory scope. Streamable HTTP requires correct authentication/audience mapping, authorization, origin validation and local-first bind defaults. Stdio trusts the invoking process/environment and still needs explicit scope policy. Transport session identifiers are not durable memory keys or authorization tokens. Only the configured service may exercise storage authority; model proposals remain inputs to validation and policy.
 
-Stage 2 tests tenant/namespace event isolation, mismatched scopes/cursors, duplicate identity concurrency and safe storage diagnostics. Stages 4–5 add graph/vector/index isolation tests. Stage 6 adds constrained privileged local erasure; transport credentials remain future work.
+Stage 2 tests tenant/namespace event isolation, mismatched scopes/cursors, duplicate identity concurrency and safe storage diagnostics. Stages 4–5 add graph/vector/index isolation tests. Stage 6 adds constrained privileged local erasure; Stage 7 adds the separately configured local transport credential boundary.
 
 
 ## Implemented Stage 2 enforcement
@@ -65,7 +65,7 @@ Structural links are attributed trusted-caller assertions. Protected conflict/su
 
 Actual recording times are assigned by storage. Historical known_at views exclude later assertions and evidence; caller-supplied backdated timestamps cannot make later writes appear known earlier. Pre-v3 original recording times are unavailable and explicitly reported as such. This is auditable local history, not a trusted external time or cryptographic authenticity service.
 
-Graph/CLI output hides canonical content by default. IDs, edge metadata and topic names may still be sensitive. Local machine/filesystem access supplies CLI authority; a tenant argument is not remote authentication. Plaintext SQLite, administrator trust, limited secret scanning and absent encryption remain unchanged; Stage 6 adds a distinct constrained erasure path. No network dependency, MCP transport or TRACE integration is added.
+Graph/CLI output hides canonical content by default. IDs, edge metadata and topic names may still be sensitive. Local machine/filesystem access supplies CLI authority; a tenant argument is not remote authentication. Plaintext SQLite, administrator trust, limited secret scanning and absent encryption remain unchanged; Stage 6 adds a distinct constrained erasure path. Those graph features add no network dependency. Stage 7 separately supplies optional local MCP; TRACE remains untouched.
 
 
 ## Stage 5 retrieval and optional local vectors
@@ -76,7 +76,7 @@ The optional Ollama transport is disabled unless deliberately constructed/config
 
 Memory bodies are untrusted data in a JSON evidence packet. IDs, source references, locators and graph metadata may also be sensitive. The CLI hides content by default, including JSON output, and exposes it only through --show-content. Provider failures and ordinary diagnostics must not echo query text, memory text or response bodies. Downstream hosts remain responsible for prompt construction, tool authority and their own complete prompt token budget.
 
-Derived vectors and FTS rows remain plaintext private data subject to any future retention/erasure policy. Fingerprints do not establish objective truth or administrator-resistant authenticity. Stage 5 itself added no deletion propagation. Stage 6 adds scoped privileged logical erasure; encryption, remote authentication, MCP transport and TRACE integration remain outside the implemented boundary.
+Derived vectors and FTS rows remain plaintext private data subject to any future retention/erasure policy. Fingerprints do not establish objective truth or administrator-resistant authenticity. Stage 5 itself added no deletion propagation. Stage 6 adds scoped privileged logical erasure; encryption, public remote authentication and TRACE integration remain outside the implemented boundary. Stage 7 separately supplies local MCP authentication.
 
 ## Stage 6 worker and privileged administration
 
@@ -89,3 +89,9 @@ Erasure requires an explicit scoped event target, nonmutating dependency plan an
 Source and memory existence are rechecked inside persistence transactions, preventing paused workers from recreating erased derivations. Dedicated summaries recheck their actual evidence. No source body, source-body digest or provider response is preserved in erasure audits. Logical deletion cannot remove physical remnants, backups, exports or data already returned to another process. Operators must enforce backup/export retention separately.
 
 These local administrative APIs are not safe remote tools merely because their inputs validate. Stage 7 must implement authentication, principal/scope mapping, privilege/approval policy and transport security before external exposure. [Detailed operational boundary](background-mind.md).
+
+## Stage 7 transport enforcement
+
+The optional local MCP interface maps trusted HTTP bearer grants or one explicit stdio process grant to AuthorizedScope. Ordinary catalogs contain only retrieve, expand, get_source and status. Raw linked source text requires read_source; ingestion requires a trusted profile, ingest capability and a separate short-lived payload-bound host signature. Principal/scope/source-role metadata cannot be injected by a tool caller.
+
+Exact literal loopback binding, Host/Origin checks, SDK authentication/body parsing, bounded inputs/results/concurrency, private discovery hints and static errors protect this deployment. It is a preissued local credential profile, not an OAuth issuer, remote production service or universal host connector. Canonical and source content remain untrusted data; erasure and conflict confirmation stay privileged local actions. [MCP security](mcp-security.md) specifies threats, host responsibilities and remaining limits.

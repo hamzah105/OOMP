@@ -122,3 +122,9 @@ These last commands are manual instructions, not claimed executed model results.
 Background extraction makes new canonical memories searchable through the existing transactional lexical trigger. Maintenance checks/repairs lexical state and optionally fills a deliberately configured compatible vector space. Provider outages preserve lexical search and earlier successful vectors; status must continue to report incomplete coverage.
 
 Dedicated topic summaries are not inserted as canonical memories or automatically packed by Stage 5 recall. Their explicit inspection has independent revision/provenance semantics. Retractions withdraw source endorsement without deleting historical events. Privileged erasure removes affected lexical/vector records and summary content before commit; future indexing reads surviving canonical records and cannot restore a deleted source. An already-open read snapshot or an external consumer may retain earlier data, which logical erasure cannot recall. [SQLite snapshot isolation](https://www.sqlite.org/isolation.html). [Background policy and operations](background-mind.md).
+
+## Stage 7 MCP reuse
+
+memory.retrieve passes a server-derived scope and validated Stage 5 request to this engine; there is no second ranking, conflict or packing algorithm. MCP caps query length at 4096, results at 20 and graph nodes/edges/work at 32/64/400. Current/history and known-at/valid-at rules, explicit degraded behavior and actual evidence paths remain unchanged.
+
+token_budget still covers only serialized context_packet. The MCP structured/text forms, retrieval diagnostics, SDK metadata and host prompts add overhead; the host must account for them separately. memory.expand is a bounded structural projection using Stage 4 traversal in one scoped snapshot, rather than a new retrieval pass. See [MCP integration](mcp-integration.md).

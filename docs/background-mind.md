@@ -145,3 +145,9 @@ Erasure refuses any affected graph edge, shared memories with entity association
 Job/audit/tombstone identifiers are retained where needed for replay protection and accountability. No source body or source-body fingerprint is copied into those records. There is no application-level persistent cache beyond the documented projections; external caches and already-open snapshots remain the consumer's responsibility.
 
 Active-job capacity is bounded; durable source, outbox, attempt and audit history grows with ingestion and is not automatically pruned. Operators must monitor local disk and apply their retention policy. Stage 6 acceptance passed with 321 tests; see the actual validation record rather than treating these bounds as performance measurements.
+
+## Stage 7 MCP boundary
+
+MCP never starts a MindWorker, runs extraction, dispatches the outbox or accepts reviews on connection. A separately approved memory.ingest appends the real immutable source event through Stage 2, creating the schema v5 outbox atomically. Its reply reports persisted event ID, pending/dispatched intake and latest extraction job state independently; acceptance is not extraction completion.
+
+memory.status exposes scoped queue/index counts and explicitly says that the worker operates as a separate process. Existing CLI worker execution, WAL snapshots and replay guarantees continue while MCP clients read. Retraction, review approval and privileged erasure remain local administrative workflows. MCP reconnects and restarts do not build indexes, create new memory identities or change the database schema. [Integration](mcp-integration.md) and [MCP security](mcp-security.md).
