@@ -1,0 +1,15 @@
+{
+  "name": "live-embeddings-validation-v1",
+  "split": "validation",
+  "seeds": [43],
+  "sizes": [16],
+  "categories": ["long_history", "negative"],
+  "methods": ["trace_n8", "rolling_summary", "flat_lexical", "flat_vector", "oomp_full", "oomp_lexical", "oomp_semantic"],
+  "mode": "hybrid",
+  "evidence_budget": 12000,
+  "summary_budget": 12000,
+  "max_results": 8,
+  "metric_k": 8,
+  "max_generation_calls": 14,
+  "bootstrap_samples": 1000
+}

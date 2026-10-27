@@ -1,0 +1,4995 @@
+{
+  "client_date": "2026-10-27",
+  "interpretation": "Initial internal synthetic research; no universal superiority or generated-answer accuracy claim.",
+  "oomp_commit": "bc145c5a16b9b42d6bb6138e49da7caf87571120",
+  "trace_commit": "af202ef43daf70280d2e8915210816f788e8aff1",
+  "runs": {
+    "stage9-offline-smoke": {
+      "status": "complete",
+      "records": 100,
+      "histories": 6,
+      "cases": 20,
+      "corpora": 8,
+      "body_provenance_and_metric_records_verified": 100,
+      "status_counts": {
+        "ok": 80,
+        "unavailable": 20
+      },
+      "dataset_hash": "fdb6c8b23d5928fe61b868817083d6423839c5749ae0e688723a12bc69433800",
+      "config_hash": "90579d74a908bd7a154ca5f6b6089abcf05038f8976825b88718e79f61d6ab11",
+      "records_hash": "e7732f62dd603f73544181749112d57332d35cfcff8bad3d1a40307135011d98",
+      "source_events": 768,
+      "seeds": [
+        11
+      ],
+      "repetitions": 1,
+      "embedding": {
+        "status": "not_enabled"
+      },
+      "execution_wall_ms_excluding_statistical_report_writing": 370658.4016,
+      "memory_whole_process": {
+        "peak_working_set_bytes": 45895680,
+        "source": "Windows GetProcessMemoryInfo"
+      },
+      "methods": {
+        "trace_n8": {
+          "status_counts": {
+            "ok": 20,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "conflict_evidence_coverage": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "evidence_hit": {
+              "mean": 0.21428571428571427,
+              "ci95": [
+                0.07142857142857142,
+                0.45454545454545453
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "mrr": {
+              "mean": 0.030612244897959183,
+              "ci95": [
+                0.01020408163265306,
+                0.06493506493506493
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "ndcg_at_k": {
+              "mean": 0.058792350619589435,
+              "ci95": [
+                0.01564262420075855,
+                0.10326776297176572
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "precision_at_k": {
+              "mean": 0.026785714285714284,
+              "ci95": [
+                0.008928571428571428,
+                0.056818181818181816
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "recall_at_k": {
+              "mean": 0.16666666666666669,
+              "ci95": [
+                0.03333333333333333,
+                0.2619047619047619
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "superseded_claim_handling": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 4,
+              "histories": 2
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 8,
+              "mean": 1.3418,
+              "median": 1.2881,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.15045265985399808
+            },
+            "warm": {
+              "n": 12,
+              "mean": 1.2642833333333334,
+              "median": 1.24675,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.1137452962730434
+            }
+          },
+          "context_bytes": {
+            "n": 20,
+            "mean": 4112.35,
+            "median": 4100.0,
+            "p95": 4229.0,
+            "p99": null,
+            "stdev": 78.58972411735586
+          }
+        },
+        "rolling_summary": {
+          "status_counts": {
+            "ok": 20,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "conflict_evidence_coverage": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "evidence_hit": {
+              "mean": 0.21428571428571427,
+              "ci95": [
+                0.07142857142857142,
+                0.45454545454545453
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "mrr": {
+              "mean": 0.030612244897959183,
+              "ci95": [
+                0.01020408163265306,
+                0.06493506493506493
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "ndcg_at_k": {
+              "mean": 0.058792350619589435,
+              "ci95": [
+                0.01564262420075855,
+                0.10326776297176572
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "precision_at_k": {
+              "mean": 0.026785714285714284,
+              "ci95": [
+                0.008928571428571428,
+                0.056818181818181816
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "recall_at_k": {
+              "mean": 0.16666666666666669,
+              "ci95": [
+                0.03333333333333333,
+                0.2619047619047619
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "superseded_claim_handling": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 4,
+              "histories": 2
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 8,
+              "mean": 1.1441625,
+              "median": 1.1547,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.029149954055342396
+            },
+            "warm": {
+              "n": 12,
+              "mean": 1.1792416666666667,
+              "median": 1.15355,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.119037278029221
+            }
+          },
+          "context_bytes": {
+            "n": 20,
+            "mean": 4112.35,
+            "median": 4100.0,
+            "p95": 4229.0,
+            "p99": null,
+            "stdev": 78.58972411735586
+          }
+        },
+        "flat_lexical": {
+          "status_counts": {
+            "ok": 20,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "conflict_evidence_coverage": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "correct_empty": {
+              "mean": 0.6666666666666666,
+              "ci95": [
+                0.0,
+                1.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "evidence_hit": {
+              "mean": 0.7857142857142857,
+              "ci95": [
+                0.5882352941176471,
+                1.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "false_memory_match": {
+              "mean": 0.3333333333333333,
+              "ci95": [
+                0.0,
+                1.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "mrr": {
+              "mean": 0.75,
+              "ci95": [
+                0.575,
+                0.95
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "ndcg_at_k": {
+              "mean": 0.7420410605799421,
+              "ci95": [
+                0.5553504871268975,
+                0.9630929753571458
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "precision_at_k": {
+              "mean": 0.17857142857142858,
+              "ci95": [
+                0.1180453431372549,
+                0.2875
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 13,
+              "histories": 5
+            },
+            "query_coverage": {
+              "mean": 0.65,
+              "ci95": [
+                0.3181818181818182,
+                0.9474342105263157
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "recall_at_k": {
+              "mean": 0.7857142857142857,
+              "ci95": [
+                0.5882352941176471,
+                1.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "superseded_claim_handling": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.75,
+              "ci95": [
+                0.6666666666666666,
+                1.0
+              ],
+              "cases": 4,
+              "histories": 2
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 8,
+              "mean": 0.6772750000000001,
+              "median": 0.5317000000000001,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.5598030973986683
+            },
+            "warm": {
+              "n": 12,
+              "mean": 0.59285,
+              "median": 0.4842,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.5098705495248057
+            }
+          },
+          "context_bytes": {
+            "n": 20,
+            "mean": 1190.85,
+            "median": 761.0,
+            "p95": 4197.9,
+            "p99": null,
+            "stdev": 1428.9570460562081
+          }
+        },
+        "flat_vector": {
+          "status_counts": {
+            "ok": 0,
+            "unavailable": 20,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "conflict_evidence_coverage": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "evidence_hit": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "false_memory_match": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "known_at_fidelity": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "late_arrival_recall": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "mrr": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "ndcg_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "precision_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "provenance_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "query_coverage": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "recall_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "successful_query": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "superseded_claim_handling": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 4,
+              "histories": 2
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "p95": null,
+              "p99": null,
+              "stdev": null
+            },
+            "warm": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "p95": null,
+              "p99": null,
+              "stdev": null
+            }
+          },
+          "context_bytes": {
+            "n": 20,
+            "mean": 0,
+            "median": 0.0,
+            "p95": 0.0,
+            "p99": null,
+            "stdev": 0.0
+          }
+        },
+        "oomp_full": {
+          "status_counts": {
+            "ok": 20,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "conflict_evidence_coverage": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "conflict_labeling": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "correct_empty": {
+              "mean": 0.6666666666666666,
+              "ci95": [
+                0.0,
+                1.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "current_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "evidence_hit": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.8125,
+                1.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "false_memory_match": {
+              "mean": 0.3333333333333333,
+              "ci95": [
+                0.0,
+                1.0
+              ],
+              "cases": 6,
+              "histories": 3
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "mrr": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.8125,
+                1.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "ndcg_at_k": {
+              "mean": 0.9216237159112664,
+              "ci95": [
+                0.806420751422358,
+                1.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "precision_at_k": {
+              "mean": 0.21428571428571427,
+              "ci95": [
+                0.14583333333333334,
+                0.328125
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 15,
+              "histories": 5
+            },
+            "query_coverage": {
+              "mean": 0.75,
+              "ci95": [
+                0.39104554865424435,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "recall_at_k": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.8125,
+                1.0
+              ],
+              "cases": 14,
+              "histories": 5
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 20,
+              "histories": 6
+            },
+            "superseded_claim_handling": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 1,
+              "histories": 1
+            },
+            "temporal_evidence_correct": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 4,
+              "histories": 2
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 8,
+              "mean": 17.3198625,
+              "median": 12.015899999999998,
+              "p95": null,
+              "p99": null,
+              "stdev": 17.56465419853483
+            },
+            "warm": {
+              "n": 12,
+              "mean": 18.037691666666667,
+              "median": 10.866900000000001,
+              "p95": null,
+              "p99": null,
+              "stdev": 16.95441945085053
+            }
+          },
+          "context_bytes": {
+            "n": 20,
+            "mean": 1671.25,
+            "median": 908.5,
+            "p95": 5328.9,
+            "p99": null,
+            "stdev": 1923.8430528775634
+          }
+        }
+      },
+      "paired_primary_effects": {
+        "oomp_full-minus-trace_n8": {
+          "mean": 0.7619047619047619,
+          "ci95": [
+            0.5789181286549708,
+            0.9666666666666668
+          ],
+          "cases": 14,
+          "histories": 5,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-rolling_summary": {
+          "mean": 0.7619047619047619,
+          "ci95": [
+            0.5789181286549708,
+            0.9666666666666668
+          ],
+          "cases": 14,
+          "histories": 5,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-flat_lexical": {
+          "mean": 0.14285714285714285,
+          "ci95": [
+            0.0,
+            0.26666666666666666
+          ],
+          "cases": 14,
+          "histories": 5,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-flat_vector": {
+          "mean": 0.9285714285714286,
+          "ci95": [
+            0.8125,
+            1.0
+          ],
+          "cases": 14,
+          "histories": 5,
+          "comparison_available": false,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        }
+      }
+    },
+    "stage9-heldout": {
+      "status": "complete",
+      "records": 1440,
+      "histories": 48,
+      "cases": 160,
+      "corpora": 64,
+      "body_provenance_and_metric_records_verified": 1440,
+      "status_counts": {
+        "ok": 1120,
+        "unavailable": 320
+      },
+      "dataset_hash": "e8bdbdb67ae42786025b855c929438e997dcd469c7e6ac5bf2c0024db621e600",
+      "config_hash": "1ccb93769295dafeeeb927ae20c8d9734ab610b70c795b8c8f5e99d14198f4aa",
+      "records_hash": "eabff470c6c22aa545b8f26d6acc99572900f5e644c3396aede4840ecf7bf877",
+      "source_events": 3456,
+      "seeds": [
+        1009,
+        1013,
+        1019,
+        1021
+      ],
+      "repetitions": 1,
+      "embedding": {
+        "status": "not_enabled"
+      },
+      "execution_wall_ms_excluding_statistical_report_writing": 1477654.6283,
+      "memory_whole_process": {
+        "peak_working_set_bytes": 87334912,
+        "source": "Windows GetProcessMemoryInfo"
+      },
+      "methods": {
+        "trace_n8": {
+          "status_counts": {
+            "ok": 160,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.5,
+              "ci95": [
+                0.125,
+                0.875
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.2857142857142857,
+              "ci95": [
+                0.19995689655172416,
+                0.37625791267651343
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.10204081632653059,
+              "ci95": [
+                0.044295563461029634,
+                0.17145552560646882
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.13022092204816088,
+              "ci95": [
+                0.0682894440174141,
+                0.2029203549797825
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.03571428571428571,
+              "ci95": [
+                0.02499461206896552,
+                0.04703223908456418
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.23809523809523808,
+              "ci95": [
+                0.1584028139656071,
+                0.32478991596638657
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 0.5,
+              "ci95": [
+                0.125,
+                0.875
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.25,
+              "ci95": [
+                0.06666666666666667,
+                0.4375
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 64,
+              "mean": 1.3065546875,
+              "median": 1.2688000000000001,
+              "p95": 1.690194999999999,
+              "p99": null,
+              "stdev": 0.1456784401144744
+            },
+            "warm": {
+              "n": 96,
+              "mean": 1.31455625,
+              "median": 1.24065,
+              "p95": 1.777025,
+              "p99": null,
+              "stdev": 0.1937290130229391
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 4029.0875,
+            "median": 4016.5,
+            "p95": 4165.0,
+            "p99": 4165.0,
+            "stdev": 77.45092887530659
+          }
+        },
+        "rolling_summary": {
+          "status_counts": {
+            "ok": 160,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.5,
+              "ci95": [
+                0.125,
+                0.875
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.2857142857142857,
+              "ci95": [
+                0.19995689655172416,
+                0.37625791267651343
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.10204081632653059,
+              "ci95": [
+                0.044295563461029634,
+                0.17145552560646882
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.13022092204816088,
+              "ci95": [
+                0.0682894440174141,
+                0.2029203549797825
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.03571428571428571,
+              "ci95": [
+                0.02499461206896552,
+                0.04703223908456418
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.23809523809523808,
+              "ci95": [
+                0.1584028139656071,
+                0.32478991596638657
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 0.5,
+              "ci95": [
+                0.125,
+                0.875
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.25,
+              "ci95": [
+                0.06666666666666667,
+                0.4375
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 64,
+              "mean": 1.1659484375,
+              "median": 1.13645,
+              "p95": 1.3633199999999996,
+              "p99": null,
+              "stdev": 0.11556427469084651
+            },
+            "warm": {
+              "n": 96,
+              "mean": 1.1921229166666667,
+              "median": 1.13635,
+              "p95": 1.637025,
+              "p99": null,
+              "stdev": 0.16892175733420842
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 4029.0875,
+            "median": 4016.5,
+            "p95": 4165.0,
+            "p99": 4165.0,
+            "stdev": 77.45092887530659
+          }
+        },
+        "flat_lexical": {
+          "status_counts": {
+            "ok": 160,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.6666666666666666,
+              "ci95": [
+                0.4444444444444444,
+                0.8253968253968254
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.7857142857142857,
+              "ci95": [
+                0.7083241150442479,
+                0.8558558558558559
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 0.3333333333333333,
+              "ci95": [
+                0.1746031746031746,
+                0.5555555555555556
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.75,
+              "ci95": [
+                0.6869436256448047,
+                0.8108211527854385
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.7438606247806613,
+              "ci95": [
+                0.6747615614785196,
+                0.8101852452951438
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.17857142857142858,
+              "ci95": [
+                0.15360023521953825,
+                0.20875066489361702
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 104,
+              "histories": 40
+            },
+            "query_coverage": {
+              "mean": 0.65,
+              "ci95": [
+                0.5393821448013065,
+                0.7600184049079753
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.7857142857142857,
+              "ci95": [
+                0.7083241150442479,
+                0.8558558558558559
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.75,
+              "ci95": [
+                0.7,
+                0.8333333333333334
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 64,
+              "mean": 0.71559375,
+              "median": 0.5406500000000001,
+              "p95": 1.8949349999999998,
+              "p99": null,
+              "stdev": 0.5441005403926332
+            },
+            "warm": {
+              "n": 96,
+              "mean": 0.5444614583333334,
+              "median": 0.36695,
+              "p95": 1.7485499999999998,
+              "p99": null,
+              "stdev": 0.5506120696422715
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 1112.88125,
+            "median": 750.0,
+            "p95": 4169.0,
+            "p99": 4169.0,
+            "stdev": 1299.0699545505768
+          }
+        },
+        "flat_vector": {
+          "status_counts": {
+            "ok": 0,
+            "unavailable": 160,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "query_coverage": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "p95": null,
+              "p99": null,
+              "stdev": null
+            },
+            "warm": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "p95": null,
+              "p99": null,
+              "stdev": null
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 0,
+            "median": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "stdev": 0.0
+          }
+        },
+        "oomp_full": {
+          "status_counts": {
+            "ok": 160,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.6666666666666666,
+              "ci95": [
+                0.4444444444444444,
+                0.8253968253968254
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 0.3333333333333333,
+              "ci95": [
+                0.1746031746031746,
+                0.5555555555555556
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.9221745789638521,
+              "ci95": [
+                0.883323442978919,
+                0.9583169937672384
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.21428571428571427,
+              "ci95": [
+                0.1842628330721003,
+                0.25002693965517225
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 120,
+              "histories": 40
+            },
+            "query_coverage": {
+              "mean": 0.75,
+              "ci95": [
+                0.6347305389221557,
+                0.8589765100671141
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 64,
+              "mean": 14.8650421875,
+              "median": 11.29875,
+              "p95": 53.91567499999982,
+              "p99": null,
+              "stdev": 12.785561405652697
+            },
+            "warm": {
+              "n": 96,
+              "mean": 14.612664583333332,
+              "median": 9.943750000000001,
+              "p95": 44.742525,
+              "p99": null,
+              "stdev": 13.128219684785734
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 1573.24375,
+            "median": 897.5,
+            "p95": 5300.0,
+            "p99": 5300.0,
+            "stdev": 1771.5739892343647
+          }
+        },
+        "oomp_no_graph": {
+          "status_counts": {
+            "ok": 160,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.6666666666666666,
+              "ci95": [
+                0.4444444444444444,
+                0.8253968253968254
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 0.3333333333333333,
+              "ci95": [
+                0.1746031746031746,
+                0.5555555555555556
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.9221745789638521,
+              "ci95": [
+                0.883323442978919,
+                0.9583169937672384
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.21428571428571427,
+              "ci95": [
+                0.1842628330721003,
+                0.25002693965517225
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 120,
+              "histories": 40
+            },
+            "query_coverage": {
+              "mean": 0.75,
+              "ci95": [
+                0.6347305389221557,
+                0.8589765100671141
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 64,
+              "mean": 13.569428125,
+              "median": 11.147749999999998,
+              "p95": 47.44052499999984,
+              "p99": null,
+              "stdev": 10.829394156257191
+            },
+            "warm": {
+              "n": 96,
+              "mean": 12.890864583333332,
+              "median": 9.5099,
+              "p95": 43.36085,
+              "p99": null,
+              "stdev": 11.188400394826017
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 1549.01875,
+            "median": 897.5,
+            "p95": 5300.0,
+            "p99": 5300.0,
+            "stdev": 1771.7630826467387
+          }
+        },
+        "oomp_no_augmentation": {
+          "status_counts": {
+            "ok": 160,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.6666666666666666,
+              "ci95": [
+                0.4444444444444444,
+                0.8253968253968254
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.7857142857142857,
+              "ci95": [
+                0.7083241150442479,
+                0.8558558558558559
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 0.3333333333333333,
+              "ci95": [
+                0.1746031746031746,
+                0.5555555555555556
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.7857142857142857,
+              "ci95": [
+                0.7083241150442479,
+                0.8558558558558559
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.7793174361067091,
+              "ci95": [
+                0.7011576927728568,
+                0.8512906314206907
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.17857142857142858,
+              "ci95": [
+                0.15360023521953825,
+                0.20875066489361702
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 104,
+              "histories": 40
+            },
+            "query_coverage": {
+              "mean": 0.65,
+              "ci95": [
+                0.5393821448013065,
+                0.7600184049079753
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.7857142857142857,
+              "ci95": [
+                0.7083241150442479,
+                0.8558558558558559
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 64,
+              "mean": 15.4337734375,
+              "median": 11.2803,
+              "p95": 56.0225549999999,
+              "p99": null,
+              "stdev": 14.952748728294255
+            },
+            "warm": {
+              "n": 96,
+              "mean": 13.410101041666667,
+              "median": 8.813649999999999,
+              "p95": 47.0503,
+              "p99": null,
+              "stdev": 13.281434232519308
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 1448.44375,
+            "median": 771.5,
+            "p95": 5300.0,
+            "p99": 5300.0,
+            "stdev": 1832.2763199199262
+          }
+        },
+        "oomp_lexical": {
+          "status_counts": {
+            "ok": 160,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.6666666666666666,
+              "ci95": [
+                0.4444444444444444,
+                0.8253968253968254
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 0.3333333333333333,
+              "ci95": [
+                0.1746031746031746,
+                0.5555555555555556
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.9221745789638521,
+              "ci95": [
+                0.883323442978919,
+                0.9583169937672384
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.21428571428571427,
+              "ci95": [
+                0.1842628330721003,
+                0.25002693965517225
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 120,
+              "histories": 40
+            },
+            "query_coverage": {
+              "mean": 0.75,
+              "ci95": [
+                0.6347305389221557,
+                0.8589765100671141
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.9285714285714286,
+              "ci95": [
+                0.888,
+                0.9655172413793104
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 64,
+              "mean": 15.025975,
+              "median": 11.21575,
+              "p95": 54.307199999999824,
+              "p99": null,
+              "stdev": 13.044457534517917
+            },
+            "warm": {
+              "n": 96,
+              "mean": 14.811192708333333,
+              "median": 10.29075,
+              "p95": 46.1381,
+              "p99": null,
+              "stdev": 13.16729691098962
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 1573.24375,
+            "median": 897.5,
+            "p95": 5300.0,
+            "p99": 5300.0,
+            "stdev": 1771.5739892343647
+          }
+        },
+        "oomp_semantic": {
+          "status_counts": {
+            "ok": 0,
+            "unavailable": 160,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "conflict_evidence_coverage": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "conflict_labeling": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "current_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "evidence_hit": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "false_memory_match": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 48,
+              "histories": 24
+            },
+            "historical_state_evidence_correctness": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "irrelevant_expansion_rate": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "known_at_fidelity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "late_arrival_recall": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "mrr": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "ndcg_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "path_validity": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "precision_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "provenance_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "query_coverage": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "recall_at_k": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 112,
+              "histories": 40
+            },
+            "relevant_hops_recovered": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "source_proof_retention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 16,
+              "histories": 8
+            },
+            "successful_query": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 160,
+              "histories": 48
+            },
+            "superseded_claim_handling": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_abstention": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 8,
+              "histories": 8
+            },
+            "temporal_evidence_correct": {
+              "mean": 0.0,
+              "ci95": [
+                0.0,
+                0.0
+              ],
+              "cases": 32,
+              "histories": 16
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "p95": null,
+              "p99": null,
+              "stdev": null
+            },
+            "warm": {
+              "n": 0,
+              "mean": null,
+              "median": null,
+              "p95": null,
+              "p99": null,
+              "stdev": null
+            }
+          },
+          "context_bytes": {
+            "n": 160,
+            "mean": 0,
+            "median": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "stdev": 0.0
+          }
+        }
+      },
+      "paired_primary_effects": {
+        "oomp_full-minus-trace_n8": {
+          "mean": 0.6904761904761906,
+          "ci95": [
+            0.6011750821018061,
+            0.7817135961383749
+          ],
+          "cases": 112,
+          "histories": 40,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-rolling_summary": {
+          "mean": 0.6904761904761906,
+          "ci95": [
+            0.6011750821018061,
+            0.7817135961383749
+          ],
+          "cases": 112,
+          "histories": 40,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-flat_lexical": {
+          "mean": 0.14285714285714285,
+          "ci95": [
+            0.09734513274336283,
+            0.19090909090909092
+          ],
+          "cases": 112,
+          "histories": 40,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-flat_vector": {
+          "mean": 0.9285714285714286,
+          "ci95": [
+            0.888,
+            0.9655172413793104
+          ],
+          "cases": 112,
+          "histories": 40,
+          "comparison_available": false,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-oomp_no_graph": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "cases": 112,
+          "histories": 40,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-oomp_no_augmentation": {
+          "mean": 0.14285714285714285,
+          "ci95": [
+            0.09734513274336283,
+            0.19090909090909092
+          ],
+          "cases": 112,
+          "histories": 40,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-oomp_lexical": {
+          "mean": 0.0,
+          "ci95": [
+            0.0,
+            0.0
+          ],
+          "cases": 112,
+          "histories": 40,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-oomp_semantic": {
+          "mean": 0.9285714285714286,
+          "ci95": [
+            0.888,
+            0.9655172413793104
+          ],
+          "cases": 112,
+          "histories": 40,
+          "comparison_available": false,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        }
+      }
+    },
+    "stage9-live-embeddings": {
+      "status": "complete",
+      "records": 56,
+      "histories": 2,
+      "cases": 8,
+      "corpora": 3,
+      "body_provenance_and_metric_records_verified": 56,
+      "status_counts": {
+        "ok": 56
+      },
+      "dataset_hash": "b1b1f354bd4350a637b17566a78cff90f7bd088f38131038418cb70a0f4b99cc",
+      "config_hash": "80998937b47ec25009dc47aac968c7ea127cb1078484f8932c780c4ffd5b907a",
+      "records_hash": "c875be87dadb07bb4aa4cb3f36513f52932e63ef27b052e8bfc054774cbec53c",
+      "source_events": 32,
+      "seeds": [
+        43
+      ],
+      "repetitions": 1,
+      "embedding": {
+        "status": "ready",
+        "name": "embeddinggemma:latest",
+        "digest": "85462619ee721b466c5927d109d4cb765861907d5417b9109caebc4e614679f1",
+        "size_bytes": 621875917,
+        "space": {
+          "provider": "ollama",
+          "model": "embeddinggemma:latest",
+          "version": "stage9-ollama-embed-v1",
+          "dimension": 768
+        },
+        "endpoint_policy": "literal_loopback_no_proxy_no_redirect",
+        "truncate": false
+      },
+      "execution_wall_ms_excluding_statistical_report_writing": 27040.2699,
+      "memory_whole_process": {
+        "peak_working_set_bytes": 40067072,
+        "source": "Windows GetProcessMemoryInfo"
+      },
+      "methods": {
+        "trace_n8": {
+          "status_counts": {
+            "ok": 8,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_evidence_coverage": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_labeling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "current_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "evidence_hit": {
+              "mean": 0.25,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "historical_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "irrelevant_expansion_rate": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "known_at_fidelity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "late_arrival_recall": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "mrr": {
+              "mean": 0.03571428571428571,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "ndcg_at_k": {
+              "mean": 0.08333333333333333,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "path_validity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "precision_at_k": {
+              "mean": 0.03125,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "recall_at_k": {
+              "mean": 0.25,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "relevant_hops_recovered": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "source_proof_retention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "superseded_claim_handling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_abstention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_evidence_correct": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 3,
+              "mean": 1.1912,
+              "median": 1.1928,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.024539152389599847
+            },
+            "warm": {
+              "n": 5,
+              "mean": 1.26946,
+              "median": 1.2499,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.10270936179336333
+            }
+          },
+          "context_bytes": {
+            "n": 8,
+            "mean": 4046.875,
+            "median": 4058.5,
+            "p95": null,
+            "p99": null,
+            "stdev": 60.85213342896979
+          }
+        },
+        "rolling_summary": {
+          "status_counts": {
+            "ok": 8,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_evidence_coverage": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_labeling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "current_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "evidence_hit": {
+              "mean": 0.25,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "historical_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "irrelevant_expansion_rate": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "known_at_fidelity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "late_arrival_recall": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "mrr": {
+              "mean": 0.03571428571428571,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "ndcg_at_k": {
+              "mean": 0.08333333333333333,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "path_validity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "precision_at_k": {
+              "mean": 0.03125,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "recall_at_k": {
+              "mean": 0.25,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "relevant_hops_recovered": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "source_proof_retention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "superseded_claim_handling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_abstention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_evidence_correct": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 3,
+              "mean": 1.1161999999999999,
+              "median": 1.071,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.08133861321660213
+            },
+            "warm": {
+              "n": 5,
+              "mean": 1.08946,
+              "median": 1.0852,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.02749587241751024
+            }
+          },
+          "context_bytes": {
+            "n": 8,
+            "mean": 4046.875,
+            "median": 4058.5,
+            "p95": null,
+            "p99": null,
+            "stdev": 60.85213342896979
+          }
+        },
+        "flat_lexical": {
+          "status_counts": {
+            "ok": 8,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_evidence_coverage": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_labeling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "correct_empty": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "current_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "evidence_hit": {
+              "mean": 0.5,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "false_memory_match": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "historical_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "irrelevant_expansion_rate": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "known_at_fidelity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "late_arrival_recall": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "mrr": {
+              "mean": 0.5,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "ndcg_at_k": {
+              "mean": 0.5,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "path_validity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "precision_at_k": {
+              "mean": 0.09375,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 2,
+              "histories": 1
+            },
+            "query_coverage": {
+              "mean": 0.25,
+              "ci95": [
+                0.0,
+                0.5
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "recall_at_k": {
+              "mean": 0.5,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "relevant_hops_recovered": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "source_proof_retention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "superseded_claim_handling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_abstention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_evidence_correct": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 3,
+              "mean": 0.3622666666666667,
+              "median": 0.25,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.19844861635530076
+            },
+            "warm": {
+              "n": 5,
+              "mean": 0.2157,
+              "median": 0.179,
+              "p95": null,
+              "p99": null,
+              "stdev": 0.07735858064882008
+            }
+          },
+          "context_bytes": {
+            "n": 8,
+            "mean": 184.125,
+            "median": 0.0,
+            "p95": null,
+            "p99": null,
+            "stdev": 347.6781917233234
+          }
+        },
+        "flat_vector": {
+          "status_counts": {
+            "ok": 8,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_evidence_coverage": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_labeling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "current_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "evidence_hit": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "historical_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "irrelevant_expansion_rate": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "known_at_fidelity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "late_arrival_recall": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "mrr": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "ndcg_at_k": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "path_validity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "precision_at_k": {
+              "mean": 0.21875,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "recall_at_k": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "relevant_hops_recovered": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "source_proof_retention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "superseded_claim_handling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_abstention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_evidence_correct": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 3,
+              "mean": 47.9363,
+              "median": 46.238,
+              "p95": null,
+              "p99": null,
+              "stdev": 5.016499055118019
+            },
+            "warm": {
+              "n": 5,
+              "mean": 48.04122,
+              "median": 46.6141,
+              "p95": null,
+              "p99": null,
+              "stdev": 2.7168160651762947
+            }
+          },
+          "context_bytes": {
+            "n": 8,
+            "mean": 1946.25,
+            "median": 2006.0,
+            "p95": null,
+            "p99": null,
+            "stdev": 508.31057716433844
+          }
+        },
+        "oomp_full": {
+          "status_counts": {
+            "ok": 8,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_evidence_coverage": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_labeling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "current_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "evidence_hit": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "historical_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "irrelevant_expansion_rate": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "known_at_fidelity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "late_arrival_recall": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "mrr": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "ndcg_at_k": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "path_validity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "precision_at_k": {
+              "mean": 0.21875,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "recall_at_k": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "relevant_hops_recovered": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "source_proof_retention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "superseded_claim_handling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_abstention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_evidence_correct": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 3,
+              "mean": 66.02076666666667,
+              "median": 65.0283,
+              "p95": null,
+              "p99": null,
+              "stdev": 6.350532652725545
+            },
+            "warm": {
+              "n": 5,
+              "mean": 63.859140000000004,
+              "median": 65.888,
+              "p95": null,
+              "p99": null,
+              "stdev": 3.5598165617065174
+            }
+          },
+          "context_bytes": {
+            "n": 8,
+            "mean": 2434.625,
+            "median": 2503.0,
+            "p95": null,
+            "p99": null,
+            "stdev": 643.6234341600684
+          }
+        },
+        "oomp_lexical": {
+          "status_counts": {
+            "ok": 8,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_evidence_coverage": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_labeling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "correct_empty": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "current_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "evidence_hit": {
+              "mean": 0.75,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "false_memory_match": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "historical_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "irrelevant_expansion_rate": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "known_at_fidelity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "late_arrival_recall": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "mrr": {
+              "mean": 0.75,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "ndcg_at_k": {
+              "mean": 0.75,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "path_validity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "precision_at_k": {
+              "mean": 0.15625,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 3,
+              "histories": 1
+            },
+            "query_coverage": {
+              "mean": 0.375,
+              "ci95": [
+                0.0,
+                0.75
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "recall_at_k": {
+              "mean": 0.75,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "relevant_hops_recovered": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "source_proof_retention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "superseded_claim_handling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_abstention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_evidence_correct": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 3,
+              "mean": 7.2364,
+              "median": 6.2724,
+              "p95": null,
+              "p99": null,
+              "stdev": 1.7933699674077295
+            },
+            "warm": {
+              "n": 5,
+              "mean": 7.2071000000000005,
+              "median": 6.32,
+              "p95": null,
+              "p99": null,
+              "stdev": 1.3653661889764228
+            }
+          },
+          "context_bytes": {
+            "n": 8,
+            "mean": 351.25,
+            "median": 0.0,
+            "p95": null,
+            "p99": null,
+            "stdev": 492.4779182866984
+          }
+        },
+        "oomp_semantic": {
+          "status_counts": {
+            "ok": 8,
+            "unavailable": 0,
+            "failed": 0,
+            "invalid": 0
+          },
+          "metrics": {
+            "chain_completion": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_evidence_coverage": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "conflict_labeling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "correct_empty": {
+              "mean": 0.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "current_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "evidence_hit": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "false_memory_match": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "historical_state_evidence_correctness": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "irrelevant_expansion_rate": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "known_at_fidelity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "late_arrival_recall": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "mrr": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "ndcg_at_k": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "path_validity": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "precision_at_k": {
+              "mean": 0.21875,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "provenance_correctness": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "query_coverage": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "recall_at_k": {
+              "mean": 1.0,
+              "ci95": null,
+              "cases": 4,
+              "histories": 1
+            },
+            "relevant_hops_recovered": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "source_proof_retention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "successful_query": {
+              "mean": 1.0,
+              "ci95": [
+                1.0,
+                1.0
+              ],
+              "cases": 8,
+              "histories": 2
+            },
+            "superseded_claim_handling": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_abstention": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            },
+            "temporal_evidence_correct": {
+              "mean": null,
+              "ci95": null,
+              "cases": 0,
+              "histories": 0
+            }
+          },
+          "latency_ms": {
+            "first_query": {
+              "n": 3,
+              "mean": 59.6295,
+              "median": 58.2578,
+              "p95": null,
+              "p99": null,
+              "stdev": 3.1468806888727117
+            },
+            "warm": {
+              "n": 5,
+              "mean": 62.9949,
+              "median": 62.89,
+              "p95": null,
+              "p99": null,
+              "stdev": 7.200630888331936
+            }
+          },
+          "context_bytes": {
+            "n": 8,
+            "mean": 2425.25,
+            "median": 2503.0,
+            "p95": null,
+            "p99": null,
+            "stdev": 651.5425103990858
+          }
+        }
+      },
+      "paired_primary_effects": {
+        "oomp_full-minus-trace_n8": {
+          "mean": 0.75,
+          "ci95": null,
+          "cases": 4,
+          "histories": 1,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-rolling_summary": {
+          "mean": 0.75,
+          "ci95": null,
+          "cases": 4,
+          "histories": 1,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-flat_lexical": {
+          "mean": 0.5,
+          "ci95": null,
+          "cases": 4,
+          "histories": 1,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-flat_vector": {
+          "mean": 0.0,
+          "ci95": null,
+          "cases": 4,
+          "histories": 1,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-oomp_lexical": {
+          "mean": 0.25,
+          "ci95": null,
+          "cases": 4,
+          "histories": 1,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        },
+        "oomp_full-minus-oomp_semantic": {
+          "mean": 0.0,
+          "ci95": null,
+          "cases": 4,
+          "histories": 1,
+          "comparison_available": true,
+          "note": "Unavailable systems remain in denominators but their numerical difference is NOT an executed comparative effect."
+        }
+      }
+    }
+  },
+  "trace_context": {
+    "queries": 4,
+    "prompt_conditions_per_query": 6,
+    "protocols": [
+      "2026-07-28"
+    ],
+    "real_mongo_writes": 0,
+    "generation_calls": 0,
+    "all_recent_context_and_budget_checks_passed": true
+  },
+  "source_integrity": {
+    "trace_tracked_files_unchanged": 81,
+    "existing_database_files_unchanged": 9,
+    "original_oomp_test_files_unchanged": 28,
+    "original_production_files_unchanged": 55
+  },
+  "registration_code_hash": "258b46be226ed86377b37aa724f03707511ba00a029754dffe343876be4dff19",
+  "acceptance_code_hash": "923b5c4759d3c1a7d56bfd27194cbbdd4dd0b6828781228aa9429ffc0b5e709c",
+  "post_registration_changes": "Empty/interrupted report lifecycle, empty-method validation and evidence-body grounding guards; independent TRACE context-only adapter. No production retrieval/dataset/threshold changes. All stored metrics and bodies were revalidated.",
+  "claims": {
+    "H1": {
+      "outcome": "supported_on_generated_cases",
+      "limitation": "Not independent authorship or general semantic recall; offline paraphrases can fail."
+    },
+    "H2": {
+      "outcome": "inconclusive_causal_attribution",
+      "observation": "Curated current-state and dispute evidence benefits observed; no isolated temporal-off switch."
+    },
+    "H3": {
+      "outcome": "not_supported_in_default_workload",
+      "observation": "No chain-completion gain or recall gain from neighborhood expansion."
+    },
+    "H4": {
+      "outcome": "inconclusive",
+      "limitation": "Canonical reuse is implemented, but no faithful consolidation-off comparison exists."
+    },
+    "H5": {
+      "outcome": "supported_in_observed_costs",
+      "limitation": "Extra measured processing/query costs on one desktop; concurrent workloads preclude general performance claims."
+    }
+  },
+  "pending": [
+    "Live LLaMA comparative answers",
+    "full FastAPI chat/login application experiment",
+    "human answer review",
+    "512/1024-scale execution",
+    "external memory products",
+    "isolated temporal/consolidation/fusion ablations"
+  ],
+  "tests": {
+    "total": 498,
+    "new": 106,
+    "prior": 392,
+    "failures": 0,
+    "skips": 0,
+    "summary": "======================= 498 passed in 430.57s (0:07:10) ======================="
+  }
+}

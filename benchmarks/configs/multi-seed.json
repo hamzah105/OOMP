@@ -1,0 +1,12 @@
+{
+  "name": "offline-heldout-v1",
+  "split": "heldout",
+  "seeds": [1009, 1013, 1019, 1021],
+  "sizes": [16, 128],
+  "methods": ["trace_n8", "rolling_summary", "flat_lexical", "flat_vector", "oomp_full", "oomp_no_graph", "oomp_no_augmentation", "oomp_lexical", "oomp_semantic"],
+  "evidence_budget": 12000,
+  "summary_budget": 12000,
+  "max_results": 8,
+  "metric_k": 8,
+  "bootstrap_samples": 2000
+}

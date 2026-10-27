@@ -6,9 +6,9 @@ Potential uses include persistent project context, changing user preferences, do
 
 ## Current scope
 
-Stage 1 is implemented and acceptance-verified (79 tests passed). It includes validated domain and retrieval schemas, six replaceable component protocols, an offline diagnostic CLI, unit tests, and architectural, security and research documentation. Stage 2 adds a SQLite event store, scoped idempotent ingestion, chronological pages and storage diagnostics (acceptance verified: 120 total tests passed, including all original 79). Stage 3 acceptance passed: **192 tests**, including the original 120. It adds deterministic offline extraction, schema version 2 canonical-memory/entity persistence, scoped evidence deduplication, and synchronous atomic processing. Its validation results are recorded in [Stage 3 validation](docs/stage3-validation.md). Stage 4 acceptance passed: **226 total tests**, including all 192 prior cases. It adds a typed temporal graph, explicit topic projections, bounded structural traversal and conservative conflict governance; its results are recorded in [Stage 4 validation](docs/stage4-validation.md). Stage 5 acceptance passed: **279 total tests**, including all 226 prior cases. Stage 5 adds offline lexical retrieval, explicit local semantic/hybrid modes, derived SQLite v4 indexes and bounded evidence packing. Its implementation and validation are documented in [retrieval](docs/retrieval.md) and [Stage 5 validation](docs/stage5-validation.md). Stage 6 acceptance passed: **321 total tests**, including all 279 prior cases. It adds explicit durable workers, scoped outbox/jobs, versioned extractive summaries and local governance/privacy administration. Its results are recorded in [Stage 6 validation](docs/stage6-validation.md). Stage 7 adds an optional official-SDK MCP adapter with stdio, authenticated loopback stateless HTTP, read-only discovery and separately approved ingestion. See [MCP integration](docs/mcp-integration.md) and [Stage 7 validation](docs/stage7-validation.md). TRACE integration, answer generation and dashboards remain future work. A token budget limits selected evidence; it does not enlarge an LLM's native context window.
+Stage 1 is implemented and acceptance-verified (79 tests passed). It includes validated domain and retrieval schemas, six replaceable component protocols, an offline diagnostic CLI, unit tests, and architectural, security and research documentation. Stage 2 adds a SQLite event store, scoped idempotent ingestion, chronological pages and storage diagnostics (acceptance verified: 120 total tests passed, including all original 79). Stage 3 acceptance passed: **192 tests**, including the original 120. It adds deterministic offline extraction, schema version 2 canonical-memory/entity persistence, scoped evidence deduplication, and synchronous atomic processing. Its validation results are recorded in [Stage 3 validation](docs/stage3-validation.md). Stage 4 acceptance passed: **226 total tests**, including all 192 prior cases. It adds a typed temporal graph, explicit topic projections, bounded structural traversal and conservative conflict governance; its results are recorded in [Stage 4 validation](docs/stage4-validation.md). Stage 5 acceptance passed: **279 total tests**, including all 226 prior cases. Stage 5 adds offline lexical retrieval, explicit local semantic/hybrid modes, derived SQLite v4 indexes and bounded evidence packing. Its implementation and validation are documented in [retrieval](docs/retrieval.md) and [Stage 5 validation](docs/stage5-validation.md). Stage 6 acceptance passed: **321 total tests**, including all 279 prior cases. It adds explicit durable workers, scoped outbox/jobs, versioned extractive summaries and local governance/privacy administration. Its results are recorded in [Stage 6 validation](docs/stage6-validation.md). Stage 7 adds an optional official-SDK MCP adapter with stdio, authenticated loopback stateless HTTP, read-only discovery and separately approved ingestion. See [MCP integration](docs/mcp-integration.md) and [Stage 7 validation](docs/stage7-validation.md). Stage 8 integration is implemented independently in TRACE; Stage 9 research and its optional generation bridge are described below. Dashboards remain future work. A token budget limits selected evidence; it does not enlarge an LLM's native context window.
 
-The Python import is `oomp`; local distribution metadata uses `oomp-memory` version `0.1.0`. This does not assert ownership or reservation of a PyPI name. OOMP does not import or modify TRACE.AI. Its eventual adapter belongs at an external integration boundary.
+The Python import is `oomp`; local distribution metadata uses `oomp-memory` version `0.1.0`. This does not assert ownership or reservation of a PyPI name. OOMP's production package does not import TRACE.AI. Stage 8 is implemented in TRACE's independent repository; Stage 9 adds the separate synthetic research harness described below.
 
 ## Windows development setup
 
@@ -229,4 +229,30 @@ Install the optional adapter with python -m pip install -e ".[dev,mcp]". Read-on
 .\.venv\Scripts\python.exe -m oomp mcp --help
 ~~~
 
-These synthetic examples run actual SDK clients, recover early memory after 105 later turns, and clean up their temporary storage/listeners. Configure your own existing database and explicit scope using the [Windows connection guide](docs/mcp-integration.md). Host configuration generation prints placeholders without editing host applications. Tested compatibility is the official SDK Client (modern and legacy HTTP), not every desktop AI host. See [security](docs/mcp-security.md), [validation](docs/stage7-validation.md) and the [39-item report](docs/stage-7-report.md). Work stops at Stage 7 for manual assessment.
+These synthetic examples run actual SDK clients, recover early memory after 105 later turns, and clean up their temporary storage/listeners. Configure your own existing database and explicit scope using the [Windows connection guide](docs/mcp-integration.md). Host configuration generation prints placeholders without editing host applications. Tested compatibility is the official SDK Client (modern and legacy HTTP), not every desktop AI host. See [security](docs/mcp-security.md), [validation](docs/stage7-validation.md) and the [39-item report](docs/stage-7-report.md) for that checkpoint.
+
+## Stage 9 reproducible research
+
+The independent TRACE repository now has its optional Stage 8 MCP integration.
+Stage 9 leaves both production codebases and private databases unchanged. The
+separate [benchmark harness](benchmarks/README.md) compares latest-eight,
+deterministic extractive summary, flat FTS5, optional real vectors and the actual
+OOMP engine on frozen synthetic histories. It scores actual source IDs, temporal
+evidence and supported graph paths; generated-answer quality is a separate,
+explicitly enabled experiment.
+
+~~~powershell
+.\.venv\Scripts\python.exe -m benchmarks.runner --action plan --config benchmarks/configs/offline.json
+.\.venv\Scripts\python.exe -m benchmarks.runner --config benchmarks/configs/offline.json --output benchmarks/results/my-smoke
+.\.venv\Scripts\python.exe -m benchmarks.runner --action validate --run benchmarks/results/my-smoke
+~~~
+
+Runs preserve raw results, frozen configuration/dataset hashes, preparation and
+query costs, failures, model availability and seeded history-cluster uncertainty.
+No model is downloaded; no personal histories are imported. Read
+[methodology](docs/benchmark-methodology.md), [datasets](docs/benchmark-datasets.md),
+[baselines](docs/benchmark-baselines.md), [metrics](docs/benchmark-metrics.md),
+[executed validation](docs/stage9-validation.md) and the
+[42-item Stage 9 report](docs/stage-9-report.md). These are initial internal
+synthetic results, with negative findings and limitations, not general superiority
+or state-of-the-art claims. Stage 10 release work remains pending manual review.

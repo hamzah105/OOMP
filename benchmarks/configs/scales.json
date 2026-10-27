@@ -1,0 +1,13 @@
+{
+  "name": "offline-scaling-v1",
+  "split": "validation",
+  "seeds": [47],
+  "sizes": [16, 64, 128, 512, 1024],
+  "categories": ["long_history"],
+  "methods": ["trace_n8", "rolling_summary", "flat_lexical", "oomp_full"],
+  "evidence_budget": 12000,
+  "summary_budget": 12000,
+  "max_results": 8,
+  "metric_k": 8,
+  "bootstrap_samples": 1000
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "registered_before_heldout_run": true,
+  "primary_metric": "recall_at_k",
+  "primary_aggregation": "case macro, positive-source queries only; negative controls reported separately; history-cluster paired bootstrap",
+  "hypotheses": [
+    {"id": "H1", "hypothesis": "OOMP improves source-grounded historical retrieval outside the latest-eight window.", "datasets": ["long_history"], "baseline": "trace_n8", "primary_metric": "recall_at_k", "outcome": "pending"},
+    {"id": "H2", "hypothesis": "Temporal governance reduces current versus historical evidence confusion.", "datasets": ["temporal", "contradiction"], "baseline": "flat_lexical", "primary_metric": "temporal_evidence_correct", "causal_limitation": "No isolated temporal-filter switch; full versus flat also differs in other features and packing.", "outcome": "pending"},
+    {"id": "H3", "hypothesis": "Graph expansion improves supported multi-hop retrieval within actual depth limits.", "datasets": ["multihop"], "baseline": "oomp_no_graph", "primary_metric": "chain_completion", "outcome": "pending"},
+    {"id": "H4", "hypothesis": "Canonical consolidation reduces redundant evidence packing.", "datasets": ["long_history", "noisy"], "baseline": "rolling_summary", "primary_metric": "recall_at_k", "causal_limitation": "No faithful consolidation-off production switch; canonical reuse can be inspected but causal gain remains inconclusive.", "outcome": "pending"},
+    {"id": "H5", "hypothesis": "Structured retrieval incurs additional ingestion/index and query costs.", "datasets": ["all"], "baseline": "trace_n8", "primary_metric": "measured costs and retrieval_ms", "outcome": "pending"}
+  ]
+}

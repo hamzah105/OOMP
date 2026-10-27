@@ -1,6 +1,10 @@
 # Ten-stage roadmap
 
-This implementation stops after Stage 7. Stages 1–6 retain their accepted baseline; Stage 7 validation and manual assessment are recorded below. Later stages are planned work, not installed or operational capabilities.
+The current milestone is Stage 9. Stages 1–7 retain their accepted OOMP baseline;
+Stage 8 is implemented in the independent TRACE repository. Stage 9 adds the
+separate synthetic benchmarking framework and measured internal comparisons.
+Stage 10 remains planned. Historical entries below record their own checkpoint
+boundaries; current validation is in [Stage 9 validation](stage9-validation.md).
 
 | Stage | Name | Status | Acceptance focus |
 | --- | --- | --- | --- |
@@ -11,8 +15,8 @@ This implementation stops after Stage 7. Stages 1–6 retain their accepted base
 | 5 | Hybrid Retrieval Engine | Implemented - acceptance checks passed | Scoped SQLite FTS5/vector/temporal/graph recall, opt-in local embeddings and counted evidence packets |
 | 6 | Background Mind Engine | Implemented — acceptance checks passed | Durable intake/jobs, restart recovery, bounded maintenance, summary revisions, governed reviews and privileged privacy administration |
 | 7 | MCP Server & Plug-in Integration | Implemented; see Stage 7 validation | Official SDK 2.3.0, stdio/stateless loopback HTTP, scoped reads and host-approved ingestion |
-| 8 | TRACE.AI Integration | Planned | External adapter without coupling OOMP's core to TRACE |
-| 9 | Research Benchmarking | Planned | Fair baselines, ablations, reproducible datasets and measured results |
+| 8 | TRACE.AI Integration | Implemented in independent TRACE repository | Optional MCP retrieval/publication, latest-eight preservation, 216 prior primary tests; TRACE remains read-only in Stage 9 |
+| 9 | Research Benchmarking | Implemented; see Stage 9 validation | Frozen synthetic fixtures, source/temporal/path scoring, controlled baselines/ablations, real local embeddings and reproducibility artifacts |
 | 10 | Release & Research Readiness | Planned | Distribution review, compatibility, documentation and research artifacts |
 
 Stage 1 is marked implemented only after installation, tests, CLI, imports, compilation and packaging checks actually pass. Stage 2 is marked implemented only after durable file-backed storage, scoped retry/concurrency, pagination, CLI and full regression checks pass. Stage 3 is marked implemented after real v1 migration/rollback, canonical-memory/entity durability, per-event atomicity, provenance/scopes, CLI, offline example and full regressions passed. Stage 4 is marked implemented after v2 preservation/rollback, edge/topic durability, source-grounded confirmed resolution, historical knowledge/validity, bounded traversal, scoped concurrency and full regressions passed. Stage 5 adds bounded retrieval and optional local embeddings after migration, scope, temporal, budget, provider-failure, CLI and full regression checks. Stage 6 acceptance adds explicit workers and durable maintenance; Stage 7 separately adds MCP capabilities; benchmarks remain planned.
@@ -34,3 +38,11 @@ Stage 6 final validation (2026-10-27 client date): **321 passed in 221.73s**, in
 Stage 7 baseline (2026-10-27 client date): **321 passed in 227.79s** before production edits, from clean main commit d911dc9. Stage 7 adds only the optional local SDK adapter, configuration and host-approval boundary; SQLite stays v5. Final acceptance results and compatibility limits are in [validation](stage7-validation.md) and the [39-item report](stage-7-report.md). Stages 8–10 remain planned. Stop for manual assessment; no TRACE changes, commit or push.
 
 Stage 7 final validation: **392 passed in 365.59s**, preserving all 321 earlier cases and adding 71. Both actual SDK stdio and HTTP long-history demos passed; modern protocol 2026-07-28 and SDK legacy HTTP were exercised. Compilation, dependencies, installed CLI/doctor, readiness and migration/test hash preservation passed. No final test warnings. External desktop hosts and live embeddings remain unverified. See [validation](stage7-validation.md) and [report](stage-7-report.md).
+
+Stage 9 baseline (2026-10-27 client date): clean OOMP main at bc145c5,
+**392 passed in 130.38s** before edits; independent TRACE clean main at af202ef
+with its accepted 216-primary-test Stage 8 report. Production OOMP code, schema,
+original tests, private databases and all TRACE tracked files are preserved.
+Final tests and actual experimental sample counts are in
+[validation](stage9-validation.md) and the [42-item report](stage-9-report.md).
+No Stage 10 release work, commit or push is performed. Stop for user inspection.

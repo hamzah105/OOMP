@@ -1,0 +1,11 @@
+{
+  "name": "offline-smoke-v1",
+  "split": "development",
+  "seeds": [11],
+  "sizes": [128],
+  "evidence_budget": 12000,
+  "summary_budget": 12000,
+  "max_results": 8,
+  "metric_k": 8,
+  "bootstrap_samples": 1000
+}

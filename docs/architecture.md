@@ -51,7 +51,7 @@ Stage 7 uses official MCP Python SDK 2.3.0 (optional >=2.3.0,<2.4), verified on 
 
 Authentication, authorization, input size limits, approval for privileged writes, server-side scope mapping, origin validation and safe binding belong to OOMP's service/transport boundary. MCP compatibility does not itself establish tenant authorization. Stdio inherits a local process trust boundary; HTTP requires explicit authenticated principals. Neither transport holds memory state.
 
-TRACE.AI is the proposed first external integration in Stage 8. Its application's working conversation window remains an application concern. An adapter may ingest authorized events and retrieve evidence without embedding TRACE-specific classes in OOMP. This repository has no TRACE source, checkout or dependency, and this stage modifies no TRACE files.
+TRACE.AI is the independent first external integration implemented in Stage 8. Its application's working conversation window remains an application concern. Its adapter ingests approved events and retrieves evidence without embedding TRACE-specific classes in OOMP. The production package has no TRACE dependency. Stage 9 reads the separate checkout for an optional research bridge and modifies no TRACE files.
 
 ## Decisions to revisit
 
@@ -104,3 +104,33 @@ The optional oomp.mcp package contains SDK-independent configuration/contracts/a
 HTTP uses official SDK bearer/auth-context middleware, wrapped by exact local Host/Origin/header controls. Lifespan reaches the SDK's own session manager directly; stateless requests do not become memory identity. Stdio uses an explicit invoking-process grant. Separate host signatures bind privileged ingest to exact evidence; no model tool can sign, erase, merge identities or approve conflicts.
 
 Stage 5 RetrievalEngine remains the only retrieval planner. Stage 4 traversal now has a reusable connection helper and optional TemporalQuery; MCP expansion uses it inside the existing retrieval read snapshot, projecting actual edge paths without an independent retrieval algorithm. Stage 6 adds scoped event_intake_status inspection for honest append/outbox/job replies. These are generic storage extensions, with no schema change or SDK dependency. No network connection initializes or rebuilds indexes. See [integration](mcp-integration.md) and [security](mcp-security.md).
+
+## Stage 9 research boundary
+
+`benchmarks/` lives outside the installed production package. Frozen synthetic
+fixtures feed a common scoped prefix/canonical corpus, isolated baseline adapters
+and the real production retrieval engine. Source-level scoring, actual path proof,
+separate optional TRACE generation, raw records and history-cluster analysis
+follow retrieval. SQLite remains schema v5; no production algorithm or migration
+changes to improve experimental results.
+
+~~~mermaid
+flowchart LR
+    D[Frozen synthetic history and truth] --> P[Authorized common prefix]
+    P --> B[N8 / extractive summary / flat FTS / vectors]
+    P --> O[Actual OOMP stores and retrieval]
+    B --> S[Source and path scoring]
+    O --> S
+    S --> G[Optional controlled live generation]
+    S --> R[Raw records and cluster analysis]
+    G --> R
+~~~
+
+Experiment databases are newly created under ignored outputs. The harness has no
+production database selector or real MongoDB client. Scope/cutoff/budget invariants
+are checked before scoring. Supported ablations use existing request modes or an
+evaluation-only read-session wrapper, with authorization/governance preserved.
+Separate read-only TRACE subprocess bridges can validate MCP/proof/context
+composition using in-memory synthetic fixtures or call the actual local generator
+only with explicit opt-in. They do not modify the application, publish events or
+silently start autonomous workers. See [methodology](benchmark-methodology.md).

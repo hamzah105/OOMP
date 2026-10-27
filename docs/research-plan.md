@@ -1,6 +1,10 @@
 # Research plan
 
-OOMP is a research direction, not a demonstrated improvement. No novelty, experimental superiority or memory-performance benchmark result is claimed. Stage 1 tests schema/CLI correctness; it measures no retrieval quality.
+OOMP is a research direction. Stage 9 now provides initial internal synthetic
+retrieval measurements through a separate reproducible harness. These observations
+do not establish novelty, universal superiority or independently replicated
+answer-quality improvements. Stage 1–8 engineering acceptance tests and Stage 9
+research measurements remain distinct.
 
 ## Candidate hypotheses
 
@@ -14,7 +18,7 @@ Each hypothesis requires a measured comparison and may be disproven. A bounded e
 
 ## Baselines
 
-Compare last-N conversation windows (including eight interactions for the future TRACE adapter), flat lexical retrieval, vector-only retrieval, combined lexical/vector retrieval without graph signals, and summary-only memory. Add temporal filtering and graph expansion as controlled ablations. Keep datasets, embedding/extraction models, prompts and evidence budgets comparable.
+Compare last-N conversation windows (including eight interactions for TRACE), flat lexical retrieval, vector-only retrieval, combined lexical/vector retrieval without graph signals, and summary-only memory. Add temporal filtering and graph expansion as controlled ablations where faithful production switches exist. Keep datasets, embedding/extraction models, prompts and evidence budgets comparable.
 
 Test provider independence across adapters without treating a change of generation model as a memory architecture improvement. Include oracle evidence selection as a clearly separate analysis reference.
 
@@ -24,7 +28,7 @@ Use consented or synthetic multi-session event streams with stable source IDs an
 
 Define current-time and historical `as_of` questions separately. Record ground-truth supporting event IDs and uncertainty. Establish an annotation rubric and inter-annotator agreement before confidence/factuality claims. Report dataset licenses, consent, minimization and erasure handling.
 
-## Future metrics
+## Research measurements
 
 | Area | Candidate measures |
 | --- | --- |
@@ -40,5 +44,21 @@ Generated answer quality is downstream and must be reported separately from evid
 
 ## Reporting
 
-Record hypotheses and analysis choices before comparisons. Publish configuration, dependency/model versions, seeds where applicable, hardware, sample counts, uncertainty intervals and failures. Repeat runs when stochastic extraction affects outcomes. Report negative results/ablations, and separate engineering tests from memory experiments. Dataset and benchmark implementation begins in Stage 9 after preceding functionality exists.
+Record hypotheses and analysis choices before comparisons. Publish configuration, dependency/model versions, seeds where applicable, hardware, sample counts, uncertainty intervals and failures. Repeat runs when stochastic extraction affects outcomes. Report negative results/ablations, and separate engineering tests from memory experiments.
+
+Stage 9 implements [the research harness](../benchmarks/README.md),
+[frozen hypotheses](../benchmarks/claims.json), [methodology](benchmark-methodology.md),
+[datasets](benchmark-datasets.md), [baseline/ablation definitions](benchmark-baselines.md)
+and [metric formulas](benchmark-metrics.md). Actual executed observations, including
+unsupported/missing experiments, are recorded in [validation](stage9-validation.md)
+and the [completion report](stage-9-report.md). Source recall does not imply answer
+accuracy. The deterministic extractive summary does not represent all learned
+summarizers; curated temporal input does not measure automatic temporal extraction.
+
+The Stage 10 research handoff should obtain independent fixture authorship,
+broader split/template disjointness, exact tokenizer measurement, repeated isolated
+latency trials, larger real-embedding evaluations and blinded human review of real
+generated answers. No external Mem0/Zep/GraphRAG measurements or paid/cloud calls
+are invented. Any method tuning after viewing this held-out sample requires a new
+independent evaluation rather than reusing favorable results as unbiased evidence.
 
