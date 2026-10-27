@@ -1,10 +1,11 @@
 # Ten-stage roadmap
 
-The current milestone is Stage 9. Stages 1–7 retain their accepted OOMP baseline;
-Stage 8 is implemented in the independent TRACE repository. Stage 9 adds the
-separate synthetic benchmarking framework and measured internal comparisons.
-Stage 10 remains planned. Historical entries below record their own checkpoint
-boundaries; current validation is in [Stage 9 validation](stage9-validation.md).
+The current milestone is Stage 10 release/research preparation. Stages 1–9 retain
+their implemented boundaries, with Stage 8 in the independent TRACE repository.
+Version 0.1.0 remains a conditional alpha research candidate, not a published or
+production-cloud release. Historical entries below record their own checkpoint
+boundaries; current local checks and unexecuted remote/human gates are in
+[Stage 10 validation](stage10-validation.md) and [the release checklist](release-checklist.md).
 
 | Stage | Name | Status | Acceptance focus |
 | --- | --- | --- | --- |
@@ -17,7 +18,7 @@ boundaries; current validation is in [Stage 9 validation](stage9-validation.md).
 | 7 | MCP Server & Plug-in Integration | Implemented; see Stage 7 validation | Official SDK 2.3.0, stdio/stateless loopback HTTP, scoped reads and host-approved ingestion |
 | 8 | TRACE.AI Integration | Implemented in independent TRACE repository | Optional MCP retrieval/publication, latest-eight preservation, 216 prior primary tests; TRACE remains read-only in Stage 9 |
 | 9 | Research Benchmarking | Implemented; see Stage 9 validation | Frozen synthetic fixtures, source/temporal/path scoring, controlled baselines/ablations, real local embeddings and reproducibility artifacts |
-| 10 | Release & Research Readiness | Planned | Distribution review, compatibility, documentation and research artifacts |
+| 10 | Release & Research Readiness | Local candidate prepared; human/remote gates remain | Audited distributions/clean installs, preserved regressions, security/privacy and contributor documentation, validation-only CI and manuscript draft; no automatic publication |
 
 Stage 1 is marked implemented only after installation, tests, CLI, imports, compilation and packaging checks actually pass. Stage 2 is marked implemented only after durable file-backed storage, scoped retry/concurrency, pagination, CLI and full regression checks pass. Stage 3 is marked implemented after real v1 migration/rollback, canonical-memory/entity durability, per-event atomicity, provenance/scopes, CLI, offline example and full regressions passed. Stage 4 is marked implemented after v2 preservation/rollback, edge/topic durability, source-grounded confirmed resolution, historical knowledge/validity, bounded traversal, scoped concurrency and full regressions passed. Stage 5 adds bounded retrieval and optional local embeddings after migration, scope, temporal, budget, provider-failure, CLI and full regression checks. Stage 6 acceptance adds explicit workers and durable maintenance; Stage 7 separately adds MCP capabilities; benchmarks remain planned.
 

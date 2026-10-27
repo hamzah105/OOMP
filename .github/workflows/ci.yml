@@ -1,0 +1,72 @@
+name: Validate research package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.12']
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Use patched installer
+        run: python -m pip install --upgrade "pip>=26.2.2,<27"
+      - name: Install core, tests and optional MCP
+        run: python -m pip install ".[dev,mcp]"
+      - name: Verify resolved dependencies
+        run: python -m pip check
+      - name: Run all synthetic tests
+        run: python -m pytest -v --basetemp .test-artifacts/ci-pytest --junitxml=.test-artifacts/ci-tests.xml
+      - name: Compile Python sources
+        run: python -m compileall -q src tests benchmarks examples scripts
+      - name: Exercise installed CLI
+        run: oomp doctor
+
+  distributions:
+    name: Build and clean-install archives
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --upgrade "pip>=26.2.2,<27"
+      - run: python -m pip install -r requirements-release.txt
+      - name: Build wheel and source archive
+        run: python -m build
+      - name: Verify metadata
+        run: python -m twine check dist/*
+      - name: Check archive content and licenses
+        run: python scripts/check_artifacts.py dist --output artifact-inventory.json
+      - name: Install and exercise both archives in clean environments
+        run: python scripts/check_clean_installs.py --dist dist --output .test-artifacts/ci-installs
+
+  # No publishing, release, deployment, pull_request_target, write token or secret.

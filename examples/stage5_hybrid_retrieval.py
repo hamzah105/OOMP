@@ -86,7 +86,7 @@ def request(query: str, **options) -> RetrievalRequest:
 
 def run(path: Path) -> None:
     events = SQLiteEventStore(path)
-    assert events.initialize() == 4
+    assert events.initialize() == 5
     original = event("project-original", "I am developing a project called OOMP.", JAN1)
     old = event("ram-old-event", "My test computer has 4 GB RAM.", JAN5)
     upgraded = event("ram-upgrade-event", "I upgraded my test computer to 12 GB RAM.", SEP15)
@@ -173,7 +173,7 @@ def run(path: Path) -> None:
     assert strict.memories[0].source_event_ids == (original.event_id,)
 
     print(f"Database: {path}")
-    print(f"Schema: 4; source events: {events.count_events(SCOPE)}")
+    print(f"Schema: 5; source events: {events.count_events(SCOPE)}")
     print(f"Original event outside latest eight: {original.event_id not in {item.event_id for item in latest_eight}}")
     print(f"Long-history retrieved memory: {project_id} source={original.event_id}")
     print(f"Lexical indexing: first={first_index.lexical_indexed} retry_skipped={second_index.lexical_skipped}")

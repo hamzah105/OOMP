@@ -1,5 +1,15 @@
 # MCP integration (Stage 7)
 
+Release note (Stage 10, 2026-10-27): runtime/SDK/tool contracts below remain
+unchanged. Install the optional extra in the exact interpreter running the server
+and exercise the official SDK examples. Read-only defaults, separately approved
+ingestion and loopback restrictions remain required. This guide does not certify
+public/proxy hosting or every desktop client. Current installed artifact checks
+are in [Stage 10 validation](stage10-validation.md). TRACE has its own
+[independent integration guide](https://github.com/hamzah105/trace-ai-chatbot/blob/main/docs/oomp-integration.md);
+no TRACE application is bundled in OOMP's runtime. Stage 9's real embeddings do
+not retroactively change this guide's historical Stage 7 measurements.
+
 OOMP exposes its existing evidence services through the official MCP Python SDK 2.3.0. The optional dependency range is >=2.3.0,<2.4, reviewed on the client date 2026-10-27. Package version stays 0.1.0 and SQLite stays v5. MCP is an adapter; it does not generate answers, initialize a database, download models or start the Mind worker.
 
 The implemented transports are SDK stdio and stateless Streamable HTTP at /mcp on a literal loopback address. The actual SDK Client was tested with modern protocol 2026-07-28 and its legacy HTTP mode. No named desktop host or independent third-party SDK has been validated. A host that requires OAuth discovery will need another deployment profile; the implemented HTTP profile uses preissued local bearer credentials.

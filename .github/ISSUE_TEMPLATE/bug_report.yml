@@ -1,0 +1,25 @@
+name: Reproducible bug
+description: Report a problem using synthetic evidence only.
+body:
+  - type: markdown
+    attributes:
+      value: Do not include secrets, private chats or databases. Sensitive vulnerabilities follow SECURITY.md.
+  - type: input
+    id: versions
+    attributes:
+      label: Versions and platform
+      description: OOMP, Python, SQLite and optional SDK versions.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal synthetic reproduction
+      description: Command or small fixture, expected behavior, actual behavior and sanitized error codes.
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks performed
+      description: State which tests ran and which dependencies were unavailable.

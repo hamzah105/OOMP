@@ -1,10 +1,20 @@
 # Security model
 
-Stage 1 validates data shape and scope identifiers. Stage 2 implements scoped SQLite event persistence, while no network authenticator, authorizer, listener, approval service or encrypted storage is implemented. The following contracts distinguish current storage enforcement from future service policy.
+OOMP 0.1.0 is an alpha local research candidate. It implements scoped persistence,
+source validation, bounded retrieval/workers and an optional authenticated loopback
+MCP profile. It does not provide encrypted storage or a production-ready public
+multi-tenant cloud service. The stage-specific sections below describe retained
+controls and their historical boundaries; the current MCP boundary is Stage 7.
 
 ## Local-first operation
 
-CLI diagnostics run locally and send no memory data to a provider. No services bind ports and no credentials are required. The SQLite default is a local user-data directory. Stage 5 embeddings are disabled by default and support only an explicitly configured literal loopback endpoint. An externally configured extraction/embedding provider must be an explicit choice, with documented data flow and retention. File permissions and database encryption must be designed for the deployment; they are not present-day capabilities.
+Core CLI diagnostics run locally and send no memory data to a provider. Core
+operation requires no listener or credential. Explicit MCP operation separately
+starts a configured loopback service or stdio transport with trusted grants.
+The SQLite default is a local user-data directory. Embeddings are opt-in and
+support only an explicitly configured literal loopback endpoint. Provider data
+flow/retention and host filesystem protection remain operator responsibilities;
+database encryption is not implemented.
 
 ## Tenant, namespace and principal
 
@@ -95,3 +105,22 @@ These local administrative APIs are not safe remote tools merely because their i
 The optional local MCP interface maps trusted HTTP bearer grants or one explicit stdio process grant to AuthorizedScope. Ordinary catalogs contain only retrieve, expand, get_source and status. Raw linked source text requires read_source; ingestion requires a trusted profile, ingest capability and a separate short-lived payload-bound host signature. Principal/scope/source-role metadata cannot be injected by a tool caller.
 
 Exact literal loopback binding, Host/Origin checks, SDK authentication/body parsing, bounded inputs/results/concurrency, private discovery hints and static errors protect this deployment. It is a preissued local credential profile, not an OAuth issuer, remote production service or universal host connector. Canonical and source content remain untrusted data; erasure and conflict confirmation stay privileged local actions. [MCP security](mcp-security.md) specifies threats, host responsibilities and remaining limits.
+
+## Stage 10 review and release boundary
+
+The [focused review](security-review.md) records inspected trust boundaries,
+preserved security regressions, packaging fixes and actual dependency scan scope.
+Build/install tools were patched independently of runtime algorithms/dependencies.
+Archive checks and passing tests are bounded evidence, not a complete security
+certification. No model-controlled deletion/approval or public deployment was added.
+
+Protect plaintext data and backups with host permissions. Logical erasure cannot
+wipe SQLite free pages/WAL/FTS segments or external copies, and restoring an old
+snapshot can resurrect data erased later. Follow [retention and WAL-safe recovery](privacy-retention.md).
+Host prompt construction remains responsible for treating returned content as
+untrusted; JSON framing alone cannot certify an LLM's injection resistance.
+
+Use [SECURITY.md](../SECURITY.md) for sensitive reporting. Private vulnerability
+reporting requires maintainer configuration; no private email, response team or
+SLA is invented. Release recommendation and pending human/CI gates are in
+[the release checklist](release-checklist.md).

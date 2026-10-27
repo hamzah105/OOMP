@@ -1,15 +1,31 @@
 [build-system]
-requires = ["setuptools>=77"]
+requires = ["setuptools>=84.1,<85"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "oomp-memory"
 version = "0.1.0"
-description = "Provider-independent temporal memory contracts for AI applications"
+description = "Local memory with source provenance, temporal graphs and bounded retrieval"
 readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+keywords = ["memory", "provenance", "temporal-graph", "retrieval", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
 dependencies = ["pydantic>=2.9,<3"]
+
+[project.urls]
+Homepage = "https://github.com/hamzah105/OOMP"
+Repository = "https://github.com/hamzah105/OOMP"
+Documentation = "https://github.com/hamzah105/OOMP/blob/main/docs/getting-started.md"
+Issues = "https://github.com/hamzah105/OOMP/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]

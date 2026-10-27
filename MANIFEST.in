@@ -1,0 +1,22 @@
+include LICENSE NOTICE README.md pyproject.toml MANIFEST.in
+include CONTRIBUTING.md CODE_OF_CONDUCT.md SECURITY.md CHANGELOG.md THIRD_PARTY_NOTICES.md
+include requirements-release.txt
+include sample.env .gitignore
+recursive-include src/oomp *.py
+recursive-include examples *.py
+recursive-include scripts *.py
+recursive-include benchmarks *.py *.json *.md
+recursive-include docs *.md *.json
+recursive-include tests *.py
+recursive-include .github *.yml *.yaml *.md
+prune benchmarks/results
+prune .test-artifacts
+prune data
+prune .venv
+prune build
+prune dist
+prune .git
+prune credentials
+prune secrets
+global-exclude __pycache__ *.py[cod] *.db *.db-* *.sqlite *.sqlite-* *.sqlite3 *.sqlite3-*
+global-exclude .env .env.* *.pem *.key *.gguf *.ggml *.safetensors *.onnx *.faiss *.hnsw

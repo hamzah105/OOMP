@@ -1,0 +1,10 @@
+OOMP — Object-Oriented Context Map
+Copyright 2026 OOMP contributors.
+
+This project is licensed under the Apache License, Version 2.0.
+Project source: https://github.com/hamzah105/OOMP
+
+This notice provides project attribution. The distribution does not vendor
+third-party Python dependencies, external memory products, model weights or
+private conversation datasets. Separately installed components retain their
+own licenses. See THIRD_PARTY_NOTICES.md in the source distribution for scope.

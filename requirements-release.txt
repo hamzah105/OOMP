@@ -1,0 +1,5 @@
+# Maintainer tools only; not required by the OOMP runtime.
+build>=1.6,<2
+twine>=7,<8
+pip-audit>=2.10,<3
+PyYAML>=6.0.3,<7
