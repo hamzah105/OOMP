@@ -1,5 +1,11 @@
 # Privacy, retention, backup and recovery
 
+Product P1 additionally persists protected profiles, secret references/values,
+operational state and safe logs outside the memory schema. See
+[product security and recovery](product-security.md) for their locations,
+permissions, backup and trusted-operator boundaries. It performs no automatic
+history backfill, retention purge or secret rotation.
+
 OOMP is local-first and stores **plaintext** data. SQLite, WAL/SHM files, derived
 indexes and backups need host filesystem protection. CLI tenant strings and a
 constructed `AuthorizedScope` are not network authentication. The loopback MCP

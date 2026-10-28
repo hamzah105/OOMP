@@ -1,5 +1,10 @@
 # Troubleshooting
 
+For product profiles, port ownership, supervised workers and machine diagnostics,
+start with the [P1 diagnostic codes](product-cli.md#diagnostic-output) and
+[safe configuration recovery](product-onboarding.md#configuration-and-recovery).
+The manual/core troubleshooting below remains applicable.
+
 Run commands from the checkout/source-archive root unless using an installed
 `oomp` command. Use `.venv\Scripts\python.exe` on Windows when activation or the
 bare Python launcher resolves to an unintended interpreter.

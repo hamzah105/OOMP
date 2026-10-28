@@ -30,6 +30,7 @@ Issues = "https://github.com/hamzah105/OOMP/issues"
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
 mcp = ["mcp>=2.3.0,<2.4", "uvicorn>=0.31.1,<1"]
+ui = ["rich==15.0.0", "questionary==2.1.1"]
 
 [project.scripts]
 oomp = "oomp.cli:main"

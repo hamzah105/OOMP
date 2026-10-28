@@ -7,7 +7,7 @@ findings follow [SECURITY.md](SECURITY.md), not a public exploit report.
 
 The runtime requires Python 3.11+; development/release checks target 3.11 and 3.12.
 Windows is locally exercised and Windows/Linux CI is configured; actual remote
-status is reported separately. Install `.[dev,mcp]`, run `python -m pytest -v`,
+status is reported separately. Install `.[dev,mcp,ui]`, run `python -m pytest -v`,
 `python -m compileall -q src tests benchmarks examples scripts` and
 `python -m pip check`. [Full developer setup](docs/developer-guide.md).
 

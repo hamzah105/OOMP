@@ -36,8 +36,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Use patched installer
         run: python -m pip install --upgrade "pip>=26.2.2,<27"
-      - name: Install core, tests and optional MCP
-        run: python -m pip install ".[dev,mcp]"
+      - name: Install core, tests, optional MCP and UI
+        run: python -m pip install ".[dev,mcp,ui]"
       - name: Verify resolved dependencies
         run: python -m pip check
       - name: Run all synthetic tests

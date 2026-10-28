@@ -388,7 +388,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     subparsers = parser.add_subparsers(dest="command")
-    subparsers.add_parser("doctor", help="check installed package and runtime readiness")
+    doctor_parser = subparsers.add_parser("doctor", help="check installed package and runtime readiness")
+    from .product.cli import configure as configure_product
+    configure_product(subparsers, doctor_parser)
     storage_parser = subparsers.add_parser("storage", help="inspect or initialize the local event database")
     storage_commands = storage_parser.add_subparsers(dest="storage_command")
     init_parser = storage_commands.add_parser("init", help="initialize or migrate the event database")
@@ -486,6 +488,10 @@ def main(argv: list[str] | None = None) -> int:
     from .mcp.cli import configure_parser as configure_mcp_parser
     mcp_parser = configure_mcp_parser(subparsers)
     args = parser.parse_args(argv)
+    from .product.cli import COMMANDS as product_commands
+    if args.command in product_commands:
+        from .product.cli import command as product_command
+        return product_command(args)
     if args.command == "mcp":
         if args.mcp_command is None:
             mcp_parser.print_help()
@@ -493,6 +499,22 @@ def main(argv: list[str] | None = None) -> int:
         from .mcp.cli import mcp_command
         return mcp_command(args)
     if args.command == "doctor":
+        if args.full or args.json or args.profile or args.home:
+            from .product.diagnostics import diagnose
+            from .product.profiles import ProfileStore
+            from .product.ui import UI
+            try:
+                report = diagnose(ProfileStore(args.home), args.profile, full=args.full)
+            except Exception:
+                report = {"schema_version": 1, "oomp_version": __version__, "profile": None,
+                    "ok": False, "summary": {"PASS": 0, "WARN": 0, "FAIL": 1, "NOT TESTED": 0}, "checks": [{
+                    "id": "configuration", "outcome": "FAIL", "code": "invalid_diagnostic_configuration",
+                    "details": {}, "recommendation": "Review profile paths and permissions; no repair was attempted."}]}
+            if args.json:
+                print(json.dumps(report))
+            else:
+                UI(plain=args.plain).diagnostics(report)
+            return 0 if report["ok"] else 1
         return doctor()
     if args.command == "mind":
         from .mind.cli import mind_command

@@ -1,5 +1,11 @@
 # MCP integration (Stage 7)
 
+Product P1 adds [guided profiles and lifecycle](product-onboarding.md) around this
+unchanged SDK/approval interface. `oomp up` supervises a separate authenticated
+HTTP server and selected Mind worker; `oomp connect` is the host-owned stdio path.
+The explicit manual configuration/commands below remain supported. P1 does not
+patch host authentication, expose public listeners or change tool schemas.
+
 Release note (Stage 10, 2026-10-27): runtime/SDK/tool contracts below remain
 unchanged. Install the optional extra in the exact interpreter running the server
 and exercise the official SDK examples. Read-only defaults, separately approved

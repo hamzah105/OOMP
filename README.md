@@ -21,6 +21,7 @@ repository does not claim a reserved or published PyPI name.
 - Explicit durable Mind workers, restart-safe jobs, extractive projections and privileged local erasure.
 - Optional official-SDK MCP over stdio or authenticated loopback HTTP; writes require separate host approval.
 - Independent [TRACE integration](https://github.com/hamzah105/trace-ai-chatbot) and reproducible synthetic benchmarks.
+- P1 guided onboarding, private profiles, managed MCP/Mind processes and measured operational diagnostics.
 
 Core operation needs Python 3.11+, SQLite with FTS5 and Pydantic. It needs no
 TRACE, MongoDB, model, GPU, API key or network service. Models and MCP are optional.
@@ -30,28 +31,36 @@ See [limitations](https://github.com/hamzah105/OOMP/blob/main/docs/limitations.m
 
 From PowerShell, with Git and Python installed:
 
-These clone instructions target the reviewed candidate after the maintainer pushes
-it. Until then, use the current local checkout or unpacked source archive; remote
-main does not acquire uncommitted release files automatically.
+The P1 commands below belong to the local product candidate until the maintainer
+reviews and pushes it. Use that reviewed checkout/source archive; cloning remote
+main does not acquire uncommitted product files automatically.
 
 ~~~powershell
 git clone https://github.com/hamzah105/OOMP.git
 cd OOMP
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade "pip>=26.2.2,<27"
-.\.venv\Scripts\python.exe -m pip install .
+.\.venv\Scripts\python.exe -m pip install ".[mcp,ui]"
 .\.venv\Scripts\oomp.exe --version
 .\.venv\Scripts\oomp.exe doctor
-.\.venv\Scripts\python.exe examples/quickstart.py --db data/quickstart.sqlite3
-.\.venv\Scripts\oomp.exe retrieve "What project am I developing?" --tenant synthetic-quickstart --namespace demo --db data/quickstart.sqlite3 --token-budget 3000 --show-content --json
+.\.venv\Scripts\oomp.exe onboard --profile local
+.\.venv\Scripts\oomp.exe up --profile local --background
+.\.venv\Scripts\oomp.exe doctor --full --profile local
+.\.venv\Scripts\oomp.exe status --profile local
+.\.venv\Scripts\oomp.exe down --profile local
 ~~~
 
-The quickstart requires a **new disposable path**. It stores a fictional project,
-extracts/indexes its canonical memory, appends twelve unrelated observations and
-retrieves the early fact with its actual source reference after reopening SQLite.
-Omitting `--db` uses a temporary database. Scope strings here are local
-administrator intent, not remote authentication. `--show-content` deliberately
-reveals synthetic evidence; ordinary CLI inspection hides content by default.
+Onboarding previews every file, asks before generating credentials or creating a
+**new** database, and starts no services. Defaults are read-only and lexical-only;
+scope strings are trusted local administrator settings, not remote authentication.
+Core installation remains Pydantic-only. `[mcp]` enables services; `[ui]` adds
+optional keyboard menus/color with plain and `NO_COLOR` alternatives.
+
+For a fully synthetic authenticated ingest → separate worker → retrieval/proof →
+restart → shutdown demo, run `python examples/product_quickstart.py` with the
+installed interpreter. It creates disposable storage and uses no normal profile,
+TRACE, model or private history. The earlier `examples/quickstart.py` remains an
+independent core-only API demonstration.
 
 [Getting started](https://github.com/hamzah105/OOMP/blob/main/docs/getting-started.md) explains the Python API, explicit
 database initialization and optional installation. The wheel contains the runtime
@@ -59,19 +68,21 @@ package; the source archive also contains docs, tests, examples and benchmarks.
 
 ## Background work and MCP
 
-Workers start only when explicitly invoked. A bounded offline demonstration uses
-a separate synthetic database:
+One command supervises OOMP-owned MCP and Mind processes. Foreground operation is
+the default (`oomp up --profile local`, Ctrl+C to stop); background operation must
+be explicitly requested. Inspect safe operational codes or restart the profile:
 
 ~~~powershell
-.\.venv\Scripts\python.exe examples/stage6_background_mind.py --db data/mind-demo.sqlite3
-.\.venv\Scripts\oomp.exe mind status --db data/mind-demo.sqlite3 --tenant synthetic-demo --namespace stage6
-.\.venv\Scripts\python.exe -m pip install ".[mcp]"
-.\.venv\Scripts\python.exe examples/stage7_mcp_client.py --transport stdio
-.\.venv\Scripts\python.exe examples/stage7_mcp_client.py --transport streamable-http
+.\.venv\Scripts\oomp.exe logs --profile local
+.\.venv\Scripts\oomp.exe restart --profile local --background
+.\.venv\Scripts\oomp.exe doctor --full --profile local --json
+.\.venv\Scripts\oomp.exe down --profile local
 ~~~
 
-The MCP examples use the official SDK Client and disposable storage/listeners.
-They need no Ollama or TRACE and do not expose a public server. Follow
+The [P1 operator guide](https://github.com/hamzah105/OOMP/blob/main/docs/product-onboarding.md) covers standalone setup,
+read-only discovery, generic MCP templates, explicit TRACE publication and safe
+reconfiguration. Existing manual worker/MCP commands and SDK examples remain
+available for advanced separate process control. Follow
 [MCP configuration and tools](https://github.com/hamzah105/OOMP/blob/main/docs/mcp-integration.md) for explicit scope, origin,
 credential provisioning, read-only grants and separately signed ingestion.
 Compatibility with every desktop host is not claimed.
@@ -81,7 +92,7 @@ Compatibility with every desktop host is not claimed.
 Run from a checkout or extracted source archive:
 
 ~~~powershell
-.\.venv\Scripts\python.exe -m pip install ".[dev,mcp]"
+.\.venv\Scripts\python.exe -m pip install ".[dev,mcp,ui]"
 .\.venv\Scripts\python.exe -m pytest -v
 .\.venv\Scripts\python.exe -m benchmarks.runner --action plan --config benchmarks/configs/offline.json
 .\.venv\Scripts\python.exe -m benchmarks.runner --config benchmarks/configs/offline.json --output benchmarks/results/my-smoke
@@ -108,6 +119,7 @@ retrieval observations, not universal superiority or final-answer accuracy.
 
 | Task | Guide |
 | --- | --- |
+| Guided setup / one-command operation | [P1 operator guide](https://github.com/hamzah105/OOMP/blob/main/docs/product-onboarding.md), [CLI/diagnostics](https://github.com/hamzah105/OOMP/blob/main/docs/product-cli.md), [P1 evidence](https://github.com/hamzah105/OOMP/blob/main/docs/product-milestone-P1-report.md) |
 | First use / examples | [Getting started](https://github.com/hamzah105/OOMP/blob/main/docs/getting-started.md) |
 | Public interfaces and compatibility | [API reference](https://github.com/hamzah105/OOMP/blob/main/docs/api-reference.md) |
 | Development / providers / migrations | [Developer guide](https://github.com/hamzah105/OOMP/blob/main/docs/developer-guide.md), [Contributing](https://github.com/hamzah105/OOMP/blob/main/CONTRIBUTING.md) |

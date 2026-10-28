@@ -1,5 +1,10 @@
 # Public API and compatibility
 
+P1's additive local administrator CLI is documented in [product CLI](product-cli.md).
+Its diagnostic JSON format and profile settings have format version 1. These are
+operational settings, not a memory database migration or new network authority.
+Existing domain, retrieval, worker and MCP signatures below remain unchanged.
+
 Distribution `oomp-memory`, Python import `oomp`, version 0.1.0, SQLite v5.
 This is an alpha API reference, not a promise of 1.0 stability. Public contracts
 below have regression coverage. Private helpers, SQL layout, scheduler internals

@@ -14,6 +14,8 @@ Inspected direct/SDK dependency metadata during local preparation:
 | mcp / mcp-types | 2.3.0 | MIT classifiers and LICENSE files |
 | uvicorn | 0.54.0 | BSD-3-Clause expression |
 | pytest (development) | 9.1.1 | MIT expression |
+| rich (optional P1 UI) | 15.0.0 | MIT expression |
+| questionary (optional P1 UI) | 2.1.1 | MIT expression |
 
 This is the resolved local inventory, not an assertion about every future version
 allowed by a dependency range. No dependency implementation is embedded in the
@@ -21,6 +23,11 @@ OOMP wheel; validate licenses again if future packaging begins vendoring code.
 
 The runtime depends on Pydantic; MCP/uvicorn are optional, and pytest is a
 development dependency. Release tools (build, twine, pip-audit, PyYAML) are separate.
+P1's optional `[ui]` adds Rich and Questionary with reviewed exact direct pins;
+it does not add UI packages to the core dependency set. Installed transitive UI
+versions include prompt_toolkit 3.0.53, wcwidth 0.9.4, markdown-it-py 4.2.0 and
+mdurl 0.1.2. Their own distributed license files/metadata apply; those packages
+are not vendored. Exact inventory and advisory coverage accompany the P1 report.
 The exact resolved versions and their installed license metadata are recorded in
 the Stage 10 dependency inventory/audit, not inferred from package names. Future
 vendoring or redistribution must review those actual versions and preserve any

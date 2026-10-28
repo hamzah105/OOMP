@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Product milestone P1
+
+- Guided/previewed onboarding, bounded read-only discovery, private profiles and
+  atomic configuration generations; optional Rich/Questionary menus/plain mode.
+- Explicit foreground/background supervision of separate authenticated MCP and
+  Mind processes; optional approved TRACE publisher, owned shutdown/restart,
+  stale-state/PID-reuse protection and bounded safe logs.
+- Non-mutating structured diagnostics, isolated synthetic proof checks, host
+  reference templates, reversible owned exports and an independent synthetic demo.
+- Existing version 0.1.0, Apache-2.0, schema v5, manual CLI and MCP/approval
+  contracts retained. No P2–P5 feature, real TRACE change, release or publication.
+
+See [P1 report](docs/product-milestone-P1-report.md) for executed acceptance and
+limitations. The historical Stage 10 entry below records its own checkpoint.
+
 ## 0.1.0 — release candidate, not published
 
 Prepared 2026-10-27. No tag, GitHub Release or PyPI upload is created automatically.

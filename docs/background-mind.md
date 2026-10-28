@@ -1,5 +1,10 @@
 # Background Mind Engine
 
+Product P1 can explicitly supervise this unchanged worker as a separate process
+with `oomp up --profile NAME`. See [the operator guide](product-onboarding.md).
+Importing OOMP or connecting MCP still starts no worker. The manual procedures
+below remain available for advanced independent ownership.
+
 Stage 6 connects the immutable event log to explicit durable background work. It reuses Stage 3 extraction, Stage 4 governance and Stage 5 indexes. Importing OOMP starts no workers. Standard operation requires only Python, SQLite with FTS5 and the installed package.
 
 ## Authority and data flow

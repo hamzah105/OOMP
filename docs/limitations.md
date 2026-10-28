@@ -1,5 +1,10 @@
 # Implementation and deployment limitations
 
+Product P1 adds local onboarding/profiles/supervision and diagnostics; it does not
+improve the memory-intelligence/research limits below. Its tested environment,
+owned-process/host limitations and outstanding checks are in
+[the P1 report](product-milestone-P1-report.md) and [product security](product-security.md).
+
 Version 0.1.0 is an alpha local research candidate. Engineering tests establish
 specified behavior on the exercised environments, not production readiness.
 

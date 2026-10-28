@@ -1,5 +1,9 @@
 # Security model
 
+P1's additional local profile, file-permission and process-control boundaries are
+documented in [product security](product-security.md). The existing memory/MCP
+authority and governance rules below remain unchanged.
+
 OOMP 0.1.0 is an alpha local research candidate. It implements scoped persistence,
 source validation, bounded retrieval/workers and an optional authenticated loopback
 MCP profile. It does not provide encrypted storage or a production-ready public

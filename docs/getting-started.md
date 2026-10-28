@@ -1,5 +1,10 @@
 # Getting started
 
+For the guided P1 workflow, start with [onboarding and lifecycle](product-onboarding.md):
+install `.[mcp,ui]`, `oomp onboard`, `oomp up`, then `oomp doctor --full`.
+The core-only API walkthrough below and earlier manual commands remain available.
+They do not create a product supervisor or silently load a profile.
+
 Use a checkout or unpacked source archive, Python 3.11+ and SQLite with FTS5.
 The core package is independent of TRACE. Keep private data outside the source
 tree in a directory whose filesystem permissions you control.

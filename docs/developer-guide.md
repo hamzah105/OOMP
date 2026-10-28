@@ -8,7 +8,7 @@ is not promised. [Public API status](api-reference.md).
 ~~~powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install --upgrade "pip>=26.2.2,<27"
-.\.venv\Scripts\python.exe -m pip install -e ".[dev,mcp]"
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,mcp,ui]"
 .\.venv\Scripts\python.exe -m pytest -v --basetemp .test-artifacts/dev-pytest
 .\.venv\Scripts\python.exe -m compileall -q src tests benchmarks examples scripts
 .\.venv\Scripts\python.exe -m pip check
@@ -17,7 +17,7 @@ py -3.11 -m venv .venv
 Tests use synthetic events, local temporary SQLite and official SDK subprocess/
 loopback clients. No actual MongoDB, Ollama, downloads, cloud key or personal
 history is required. Optional installed SDK tests skip in core-only environments;
-the complete acceptance suite and CI test matrix install `dev,mcp`. Keep temporary
+the complete acceptance suite and CI test matrix install `dev,mcp,ui`. Keep temporary
 output ignored and do not replace production files to run examples.
 
 ## Boundaries and changes
