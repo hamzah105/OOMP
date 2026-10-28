@@ -40,6 +40,8 @@ jobs:
         run: python -m pip install ".[dev,mcp,ui]"
       - name: Verify resolved dependencies
         run: python -m pip check
+      - name: Prepare test artifacts directory
+        run: python -c "from pathlib import Path; Path('.test-artifacts').mkdir(parents=True, exist_ok=True)"
       - name: Run all synthetic tests
         run: python -m pytest -v --basetemp .test-artifacts/ci-pytest --junitxml=.test-artifacts/ci-tests.xml
       - name: Compile Python sources
