@@ -283,6 +283,42 @@ class SQLitePrivacyStore(SQLiteMindStore):
             if event_row is None:
                 return False
             source=SQLiteMindStore._decode(event_row)
+            if memory.metadata.get("canonicalization_version") == "p2.1":
+                from oomp.understanding.contracts import ExtractionConfiguration
+                from oomp.understanding.rules import RulesExtractor
+                from oomp.understanding.storage import candidate_writes
+                try:
+                    original_scope = AuthorizedScope(
+                        tenant_id=scope.tenant_id, namespace=scope.namespace,
+                        principal_id=memory.metadata["principal_id"],
+                    )
+                    config = ExtractionConfiguration()
+                    for candidate in RulesExtractor(config).propose(original_scope, source):
+                        for write in candidate_writes(original_scope, source, candidate, config):
+                            if (_memory_fingerprint(write.memory) == row["payload_fingerprint"]
+                                    and write.memory.canonical_key == memory.canonical_key):
+                                return True
+                    # Re-prove a supported literal model refinement using the
+                    # independent validator. This is deterministic source proof,
+                    # not an inference request or a claim that a model ran here.
+                    from oomp.understanding.rules import clauses, proposal_for
+                    from oomp.understanding.validator import CandidateValidator
+                    proof_config = ExtractionConfiguration(mode="local-llm", model="source-proof")
+                    for span in clauses(source.content):
+                        candidate = proposal_for(original_scope, source, span, provider="ollama", model="source-proof",
+                            hints={"predicate": memory.metadata["predicate"],
+                                   "memory_category": memory.metadata["category"],
+                                   "assertion_kind": memory.metadata["assertion_kind"]})
+                        try:
+                            CandidateValidator(proof_config).validate(original_scope, source, (candidate,))
+                        except ValueError:
+                            continue
+                        for write in candidate_writes(original_scope, source, candidate, proof_config):
+                            if (_memory_fingerprint(write.memory) == row["payload_fingerprint"]
+                                    and write.memory.canonical_key == memory.canonical_key):
+                                return True
+                except (ValueError, TypeError, KeyError):
+                    return False
             if eligibility_reason(source) is None:
                 for candidate in extractor.extract_candidates(scope,source):
                     derived=canonicalize(candidate,source)

@@ -1,0 +1,20 @@
+{
+  "version": "mind2.corpus.v1",
+  "synthetic": true,
+  "annotation_status": "Codex draft; pending independent human review",
+  "sessions": 30,
+  "events": 240,
+  "opportunities": 247,
+  "files": {
+    "sessions.json": "c8ec3dccca6f5d4667401bcb20d661e3881bd11dec6fe25c10dc50ff71e1a257",
+    "annotation-schema.json": "1f0240ff780913eb3e0868697f766831bddd83fed9fb5c073e18c31911172ea1"
+  },
+  "quality_targets": {
+    "candidate_precision": 0.95,
+    "candidate_recall": 0.85,
+    "accepted_provenance_rate": 1.0,
+    "unauthorized_writes": 0,
+    "assistant_to_user_promotions": 0
+  },
+  "matching": "Exact event/span/role/assertion/category/predicate/retention. Wrong typed interpretations count both FP and FN. Excluded opportunities remain negative controls. Episode coverage requires exact live source span in an episodic record. Replays reuse their event ID. All 247 opportunities remain in every mode."
+}

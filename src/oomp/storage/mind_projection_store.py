@@ -258,6 +258,14 @@ class SQLiteMindProjectionStore(SQLiteGraphStore):
             if row is None:
                 return None
             revision = self._read_summary(c, authorized, row)
+            if revision.policy_version == "episode-extractive.v1":
+                from oomp.understanding.episodes import episode_snapshot
+                memories, content, fingerprint = episode_snapshot(
+                    self, c, authorized, topic, known_at=known,
+                )
+                if not memories or fingerprint != revision.source_fingerprint or content != revision.content:
+                    return None
+                return revision if known is None else revision.model_copy(update={"freshness": "recorded_projection"})
             if known is None:
                 current = self._summary_input(c, authorized, topic, max_sources=16)
                 if not current or _digest([_SUMMARY_POLICY, current]) != revision.source_fingerprint:

@@ -78,6 +78,8 @@ class MindWorker:
         embedding_provider=None,
         auto_embed_on_extract: bool = False,
         max_pending: int = 1000,
+        extraction_configuration=None,
+        extraction_provider=None,
     ) -> None:
         self.scope = _authorized(scope)
         if type(lease_seconds) is not int or not 10 <= lease_seconds <= 3600:
@@ -95,6 +97,8 @@ class MindWorker:
                 path, embedding_provider=embedding_provider,
                 auto_embed_on_extract=auto_embed_on_extract,
                 max_pending=max_pending, clock=clock,
+                extraction_configuration=extraction_configuration,
+                extraction_provider=extraction_provider,
             )
         self.handlers = handlers
 

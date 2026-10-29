@@ -42,6 +42,54 @@ def profile_name(value: str) -> str:
     return value
 
 
+def _windows_private_dacl(descriptor, user_sid, system_sid, adv) -> bool:
+    """Compare binary trustees, independent of SDDL's domain-relative aliases."""
+    import ctypes as c
+    from ctypes import wintypes as w
+
+    class ACL(c.Structure):
+        _fields_ = [("revision", w.BYTE), ("reserved", w.BYTE),
+                    ("size", w.WORD), ("count", w.WORD), ("reserved2", w.WORD)]
+
+    adv.GetSecurityDescriptorControl.argtypes = [c.c_void_p, c.POINTER(w.WORD), c.POINTER(w.DWORD)]
+    adv.GetSecurityDescriptorDacl.argtypes = [c.c_void_p, c.POINTER(w.BOOL), c.POINTER(c.c_void_p), c.POINTER(w.BOOL)]
+    adv.GetAce.argtypes = [c.c_void_p, w.DWORD, c.POINTER(c.c_void_p)]
+    adv.IsValidSid.argtypes = [c.c_void_p]
+    adv.GetLengthSid.argtypes = [c.c_void_p]
+    adv.GetLengthSid.restype = w.DWORD
+    adv.EqualSid.argtypes = [c.c_void_p, c.c_void_p]
+    control, revision = w.WORD(), w.DWORD()
+    present, defaulted, acl = w.BOOL(), w.BOOL(), c.c_void_p()
+    if not adv.GetSecurityDescriptorControl(descriptor, c.byref(control), c.byref(revision)) or not control.value & 0x1000:
+        return False
+    if not adv.GetSecurityDescriptorDacl(descriptor, c.byref(present), c.byref(acl), c.byref(defaulted)) or not present.value or not acl.value:
+        return False
+    header = c.cast(acl, c.POINTER(ACL)).contents
+    if not header.count or header.size < c.sizeof(ACL):
+        return False
+    user_full_access = False
+    for index in range(header.count):
+        ace = c.c_void_p()
+        if not adv.GetAce(acl, index, c.byref(ace)) or not ace.value:
+            return False
+        offset = ace.value - acl.value
+        if offset < c.sizeof(ACL) or offset + 8 > header.size:
+            return False
+        ace_type, flags, length = c.c_ubyte.from_address(ace.value).value, c.c_ubyte.from_address(ace.value + 1).value, c.c_ushort.from_address(ace.value + 2).value
+        # Only effective, explicit allow ACEs; OI/CI are the only allowed flags.
+        if ace_type != 0 or flags & ~3 or length < 16 or offset + length > header.size:
+            return False
+        trustee = ace.value + 8
+        if not adv.IsValidSid(trustee) or adv.GetLengthSid(trustee) > length - 8:
+            return False
+        own = bool(adv.EqualSid(trustee, user_sid))
+        if not own and not adv.EqualSid(trustee, system_sid):
+            return False
+        mask = c.c_uint32.from_address(ace.value + 4).value
+        user_full_access |= own and mask & 0x1F01FF == 0x1F01FF
+    return user_full_access
+
+
 def _windows_security(path: Path, *, set_private: bool) -> bool:
     # Explicit current-user + SYSTEM DACL, no inherited grants. No shell/username
     # interpolation, ACL changes to ancestors, or claim that chmod secures Windows.
@@ -56,22 +104,22 @@ def _windows_security(path: Path, *, set_private: bool) -> bool:
     adv.ConvertStringSecurityDescriptorToSecurityDescriptorW.argtypes = [w.LPCWSTR, w.DWORD, c.POINTER(c.c_void_p), c.POINTER(w.DWORD)]
     adv.SetFileSecurityW.argtypes = [w.LPCWSTR, w.DWORD, c.c_void_p]
     adv.GetFileSecurityW.argtypes = [w.LPCWSTR, w.DWORD, c.c_void_p, w.DWORD, c.POINTER(w.DWORD)]
-    adv.ConvertSecurityDescriptorToStringSecurityDescriptorW.argtypes = [c.c_void_p, w.DWORD, w.DWORD, c.POINTER(w.LPWSTR), c.POINTER(w.DWORD)]
+    adv.ConvertStringSidToSidW.argtypes = [w.LPCWSTR, c.POINTER(c.c_void_p)]
     kernel.LocalFree.argtypes = [c.c_void_p]
     kernel.CloseHandle.argtypes = [w.HANDLE]
     token = w.HANDLE()
     sid_text = w.LPWSTR()
     descriptor = c.c_void_p()
-    acl_text = w.LPWSTR()
+    system_sid = c.c_void_p()
     try:
         if not adv.OpenProcessToken(kernel.GetCurrentProcess(), 8, c.byref(token)):
             return False
         size = w.DWORD()
         adv.GetTokenInformation(token, 1, None, 0, c.byref(size))
-        buffer = c.create_string_buffer(size.value)
-        if not adv.GetTokenInformation(token, 1, buffer, size, c.byref(size)):
+        token_buffer = c.create_string_buffer(size.value)
+        if not adv.GetTokenInformation(token, 1, token_buffer, size, c.byref(size)):
             return False
-        sid = c.cast(buffer, c.POINTER(c.c_void_p))[0]
+        sid = c.cast(token_buffer, c.POINTER(c.c_void_p))[0]
         if not adv.ConvertSidToStringSidW(sid, c.byref(sid_text)):
             return False
         if set_private:
@@ -84,16 +132,11 @@ def _windows_security(path: Path, *, set_private: bool) -> bool:
         buffer = c.create_string_buffer(size.value)
         if not adv.GetFileSecurityW(str(path), 4, buffer, size, c.byref(size)):
             return False
-        if not adv.ConvertSecurityDescriptorToStringSecurityDescriptorW(buffer, 1, 4, c.byref(acl_text), None):
+        if not adv.ConvertStringSidToSidW("S-1-5-18", c.byref(system_sid)):
             return False
-        text = acl_text.value
-        entries = re.findall(r"\(([^)]+)\)", text)
-        return text.startswith("D:P") and bool(entries) and all(
-            e.split(";")[0] == "A" and e.split(";")[-1] in {sid_text.value, "SY", "S-1-5-18"}
-            for e in entries
-        )
+        return _windows_private_dacl(buffer, sid, system_sid, adv)
     finally:
-        for pointer in (sid_text, descriptor, acl_text):
+        for pointer in (sid_text, descriptor, system_sid):
             if pointer:
                 kernel.LocalFree(c.cast(pointer, c.c_void_p))
         if token:

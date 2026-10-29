@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import Field, StrictBool, StrictInt, field_validator, model_validator
 from oomp.domain.models import ContractModel, Identifier, AuthorizedScope
 from oomp.mcp.configuration import EmbeddingConfiguration, ServerConfiguration, Grant
+from oomp.understanding.contracts import ExtractionConfiguration
 from .safety import ProductError, profile_name, safe_path
 
 
@@ -27,6 +28,7 @@ class Profile(ContractModel):
     mind: StrictBool = True
     read_source: StrictBool = False
     provider: EmbeddingConfiguration | None = None
+    extraction: ExtractionConfiguration | None = None
     secret_source: Literal["file", "environment"] = "file"
     owner_id: str | None = Field(default=None, min_length=1, max_length=128)
     host_origin: str = "http://127.0.0.1:8000"
@@ -70,7 +72,11 @@ class Profile(ContractModel):
 
     @property
     def identity(self):
-        return hashlib.sha256(json.dumps(self.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+        payload = self.model_dump(mode="json")
+        # Nullable additive field: genuine pre-P2 profile generation IDs survive.
+        if self.extraction is None:
+            payload.pop("extraction")
+        return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
     @property
     def scope(self):

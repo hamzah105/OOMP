@@ -1,0 +1,15 @@
+{
+    "version":  "mind2.results.v1",
+    "synthetic":  true,
+    "annotation_status":  "Codex draft; pending independent human review",
+    "evaluation_date":  "2026-10-29",
+    "status":  "Actual local evaluation; mode C demonstrates rules fallback, not successful model extraction",
+    "files":  {
+                  "summary.json":  "855d4acae99a7b22dddac683c79e1c8fab638711d9e0bdf0e1ad1be034fb7510",
+                  "run.json":  "bfe29b63e24905a133427edc069b852fb7c7c958dbe4ccae0697f4e79793e9f9",
+                  "mode-A.json":  "e181502bbeb57b92a8bb90786b6f3758b29f49e42c08341d7722d17e2153ea3d",
+                  "mode-B.json":  "1ca9c1dc61215a225cd2aacd343e380b519bec2689c8df85745219c65bf37254",
+                  "mode-C.json":  "1b45eab54984526380294aceb1c2e028e84353fb53a85920ca61ebf89597f00c",
+                  "rules-concordance.json":  "2e630c1eb3bd3838f3c3edd2b687b80cc43c354542aaabb3502285c1acee5b9b"
+              }
+}

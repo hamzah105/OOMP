@@ -67,7 +67,7 @@ def test_managed_publication_requires_pinned_explicit_host_approval(tmp_path, ca
     home = tmp_path/"not-created"
     args = ["onboard", "--profile", "trace", "--home", str(home), "--project", str(project),
         "--adapter", "trace", "--owner-id", "synthetic", "--read-source", "--mode", "trusted-ingest", "--approve-ingest",
-        "--publication", "--host-python", sys.executable, "--mongo-uri-env", "P1_TEST_MONGO",
+        "--publication", "--host-python", str(Path(sys.executable).resolve()), "--mongo-uri-env", "P1_TEST_MONGO",
         "--mongo-database", "p1_test", "--yes", "--json"]
     assert main(args) == 1
     assert json.loads(capsys.readouterr().out)["code"] == "publication_approval_required"

@@ -37,7 +37,8 @@ def run_role(store, profile, role):
         from oomp.mind.worker import MindWorker
         provider = profile.provider.construct_provider() if profile.provider else None
         worker = MindWorker(profile.database, profile.scope, embedding_provider=provider,
-                            auto_embed_on_extract=provider is not None)
+                            auto_embed_on_extract=provider is not None,
+                            extraction_configuration=profile.extraction)
         ready.set()
         _emit("ready")
         while not stop.is_set():

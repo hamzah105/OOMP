@@ -22,6 +22,7 @@ repository does not claim a reserved or published PyPI name.
 - Optional official-SDK MCP over stdio or authenticated loopback HTTP; writes require separate host approval.
 - Independent [TRACE integration](https://github.com/hamzah105/trace-ai-chatbot) and reproducible synthetic benchmarks.
 - P1 guided onboarding, private profiles, managed MCP/Mind processes and measured operational diagnostics.
+- P2 clause-grounded acquisition, attributed source-linked episodes and reviewable corrections, with offline rules and explicitly configured local Ollama proposals.
 
 Core operation needs Python 3.11+, SQLite with FTS5 and Pydantic. It needs no
 TRACE, MongoDB, model, GPU, API key or network service. Models and MCP are optional.
@@ -31,7 +32,7 @@ See [limitations](https://github.com/hamzah105/OOMP/blob/main/docs/limitations.m
 
 From PowerShell, with Git and Python installed:
 
-The P1 commands below belong to the local product candidate until the maintainer
+The P1/P2 commands below belong to the local product candidate until the maintainer
 reviews and pushes it. Use that reviewed checkout/source archive; cloning remote
 main does not acquire uncommitted product files automatically.
 
@@ -87,6 +88,55 @@ available for advanced separate process control. Follow
 credential provisioning, read-only grants and separately signed ingestion.
 Compatibility with every desktop host is not claimed.
 
+## Conversational memory acquisition (P2 candidate)
+
+New product profiles use improved offline rules; existing profiles and manual
+workers retain legacy extraction until explicitly reconfigured. P2 separates
+user claims, tentative plans, aliases, questions, quoted/assistant discussion,
+low-salience episodes and reviewable corrections. A question elsewhere in a
+message no longer discards its declarative clauses. Exact source spans and live
+source governance remain the persistence boundary; an alias is an unverified
+display claim, and a correction does not erase earlier evidence.
+
+Optional `--extraction-mode local-llm --extraction-model <installed-model>`
+configuration sends text only to an explicitly configured literal-loopback Ollama
+endpoint. OOMP downloads no weights and makes no external model API calls.
+Extraction and embedding models have separate settings. Rules continue when the
+provider fails. `doctor --full` separates model reachability from an actual
+synthetic capability check; `oomp understand episodes` and `inspect` provide
+scoped local inspection. Content display requires `--show-content`.
+
+On 30 frozen synthetic conversations (247 opportunities), improved rules measured
+96.36% candidate precision and 94.64% recall, with exact accepted provenance in
+220/220 cases. **Labels are Codex drafts pending independent human review.** The
+actual local-model run made 25 requests, returned no usable proposals and fell
+back to rules; it demonstrates degradation handling, not model quality gains.
+Natural phrasing, sensitive discussion and topic resolution still have documented
+misses. P2 uses schema v5 without migration and adds no P3 hierarchy or P4 context
+virtualization. See the [P2 report](docs/product-milestone-P2-report.md) and
+[reproducible acquisition benchmark](benchmarks/mind2/README.md) for measured
+results, limits and remaining acceptance gates.
+
+Try the verified [offline Mind 2 example](examples/mind2_quickstart.py) with the
+installed interpreter. It uses fictional conversations and temporary storage,
+checks exact evidence, tentative episodes, replay and retraction, and makes no
+model calls or service connections:
+
+~~~powershell
+.\.venv\Scripts\python.exe examples/mind2_quickstart.py
+~~~
+
+The measured run used 12 source events, 13 memories and four episode summaries;
+three events were excluded from derived acquisition. Existing directories are
+refused when an explicit `--directory` is supplied.
+
+Local Windows validation passed all 682 tests on Python 3.11.4 and a fresh
+installed wheel on Python 3.12.6, plus distribution and clean-install checks.
+Hosted Windows/Ubuntu CI, independent label review and successful real-model
+extraction remain pending. Episode grouping uses coarse keyword/time heuristics;
+physical-object movement can share a relocation label. It does not establish
+general topic resolution.
+
 ## Reproduce the research
 
 Run from a checkout or extracted source archive:
@@ -120,6 +170,7 @@ retrieval observations, not universal superiority or final-answer accuracy.
 | Task | Guide |
 | --- | --- |
 | Guided setup / one-command operation | [P1 operator guide](https://github.com/hamzah105/OOMP/blob/main/docs/product-onboarding.md), [CLI/diagnostics](https://github.com/hamzah105/OOMP/blob/main/docs/product-cli.md), [P1 evidence](https://github.com/hamzah105/OOMP/blob/main/docs/product-milestone-P1-report.md) |
+| P1 stabilization / P2 acquisition candidate | [P1 stabilization](docs/product-milestone-P1-stabilization.md), [P2 implementation and measured limits](docs/product-milestone-P2-report.md), [Mind 2 benchmark](benchmarks/mind2/README.md) |
 | First use / examples | [Getting started](https://github.com/hamzah105/OOMP/blob/main/docs/getting-started.md) |
 | Public interfaces and compatibility | [API reference](https://github.com/hamzah105/OOMP/blob/main/docs/api-reference.md) |
 | Development / providers / migrations | [Developer guide](https://github.com/hamzah105/OOMP/blob/main/docs/developer-guide.md), [Contributing](https://github.com/hamzah105/OOMP/blob/main/CONTRIBUTING.md) |
