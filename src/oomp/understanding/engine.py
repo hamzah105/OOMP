@@ -96,4 +96,6 @@ class UnderstandingEngine:
         if not proposals:
             return AcquisitionResult(ProcessingResult(event_id=event_id, reason=stats["code"]), **stats)
         result, revisions = self.store.commit(scope, event, proposals, self.config, job=job)
+        if result.reason == "source_retracted":
+            stats["code"] = "source_retracted"
         return AcquisitionResult(result, summary_revisions=revisions, **stats)
