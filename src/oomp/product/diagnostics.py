@@ -34,7 +34,7 @@ def synthetic_probe():
             occurred_at=when, ingested_at=when, source_reference=SourceReference(
                 source_system="p1-diagnostic", external_event_id="p1-probe", timestamp=when))
         store = SQLiteEventStore(path)
-        store.initialize()
+        schema_version = store.initialize()
         store.append(scope, event)
         worker = MindWorker(path, scope)
         for _ in range(4):
@@ -48,7 +48,7 @@ def synthetic_probe():
                 or result.memories[0].source_references != (event.source_reference,)
                 or result.estimated_token_count > 3000):
             raise ProductError("synthetic_provenance_failed")
-        return {"source_proofs": 1, "schema": 5, "model_calls": 0,
+        return {"source_proofs": 1, "schema": schema_version, "model_calls": 0,
                 "evidence_bytes": result.estimated_token_count, "budget_bytes": 3000}
 
 

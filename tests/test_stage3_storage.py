@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import json
 import sqlite3
 import threading
@@ -66,7 +68,7 @@ def stores(tmp_path):
     path = tmp_path / "data" / "oomp.sqlite3"
     events = SQLiteEventStore(path)
     memories = SQLiteMemoryStore(path)
-    assert events.initialize() == 5
+    assert events.initialize() == SCHEMA_VERSION
     return events, memories
 
 
@@ -77,14 +79,14 @@ def add(events, source):
 
 def test_schema_v2_fresh_repeat_and_future_rejection(stores):
     events, memories = stores
-    assert events.status().schema_version == 5
+    assert events.status().schema_version == SCHEMA_VERSION
     assert events.status().ready
-    assert events.initialize() == 5
+    assert events.initialize() == SCHEMA_VERSION
     with closing(sqlite3.connect(events.path)) as connection:
-        assert connection.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert connection.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
     with closing(sqlite3.connect(events.path)) as connection, connection:
-        connection.execute("PRAGMA user_version=6")
+        connection.execute(f"PRAGMA user_version={SCHEMA_VERSION+1}")
     assert not events.status().ready
     with pytest.raises(UnsupportedSchemaVersionError):
         events.initialize()
@@ -130,7 +132,7 @@ def test_genuine_v1_event_is_readable_and_upgrades_without_change(tmp_path):
         triggers_before = dict(connection.execute(
             "SELECT name, sql FROM sqlite_master WHERE type='trigger' AND name GLOB 'events_*'"
         ))
-    assert old.initialize() == 5
+    assert old.initialize() == SCHEMA_VERSION
     with closing(sqlite3.connect(path)) as connection:
         after = connection.execute("SELECT * FROM events").fetchone()
         triggers_after = dict(connection.execute(
@@ -140,7 +142,7 @@ def test_genuine_v1_event_is_readable_and_upgrades_without_change(tmp_path):
     assert after == before
     assert all(triggers_after[name] == sql for name, sql in triggers_before.items())
     assert old.get(scope(), "e1") == original
-    assert old.initialize() == 5
+    assert old.initialize() == SCHEMA_VERSION
 
 
 def test_failed_v2_migration_preserves_genuine_v1_rows_and_triggers(tmp_path, monkeypatch):
@@ -158,7 +160,7 @@ def test_failed_v2_migration_preserves_genuine_v1_rows_and_triggers(tmp_path, mo
         assert connection.execute("SELECT COUNT(*) FROM events").fetchone()[0] == 1
     assert SQLiteEventStore(path).get(scope(), "e1") == original
     monkeypatch.setitem(migrations.MIGRATIONS, 2, MIGRATION_2)
-    assert SQLiteEventStore(path).initialize() == 5
+    assert SQLiteEventStore(path).initialize() == SCHEMA_VERSION
 
 
 def test_memory_roundtrip_preserves_all_fields_and_deep_metadata(stores):

@@ -1,8 +1,10 @@
 # P1 operator guide: onboard, operate and inspect OOMP
 
-Product milestone P1 adds an operational shell to OOMP **0.1.0 / SQLite v5**.
+Product milestone P1 introduced an operational shell on **0.1.0 / SQLite v5**.
+Current P3 storage uses **SQLite schema v6**; its additive object projection is
+documented in the [object architecture](object-memory-architecture.md).
 It reuses the existing MCP and Mind services; extraction, graph, retrieval,
-host approval and memory schema are unchanged. This is local developer tooling,
+host approval and, at P1, the memory schema were unchanged. This is local developer tooling,
 not a public memory service. [CLI reference](product-cli.md),
 [security and recovery](product-security.md), [executed report](product-milestone-P1-report.md).
 

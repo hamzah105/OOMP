@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import datetime
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 CREATE_EVENTS = """
 CREATE TABLE events (
@@ -184,9 +184,9 @@ def _matches_sql(actual: dict[tuple[str, str], str], expected: dict[tuple[str, s
     return all(normalize(actual.get(key, "")) == normalize(sql) for key, sql in expected.items())
 
 
-def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False, allow_v3: bool = False, allow_v4: bool = False, allow_v5: bool = False) -> bool:
+def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False, allow_v3: bool = False, allow_v4: bool = False, allow_v5: bool = False, allow_v6: bool = False) -> bool:
     actual = _objects(connection)
-    expected_keys = _V1_OBJECTS | (_V2_OBJECTS if allow_v2 else set()) | (_V3_OBJECTS if allow_v3 else set()) | (_V4_OBJECTS if allow_v4 else set()) | (_V5_OBJECTS if allow_v5 else set())
+    expected_keys = _V1_OBJECTS | (_V2_OBJECTS if allow_v2 else set()) | (_V3_OBJECTS if allow_v3 else set()) | (_V4_OBJECTS if allow_v4 else set()) | (_V5_OBJECTS if allow_v5 else set()) | (OBJECTS_6 if allow_v6 else set())
     if set(actual) != expected_keys:
         return False
     expected_sql = {
@@ -226,8 +226,8 @@ def verify_v1(connection: sqlite3.Connection, *, allow_v2: bool = False, allow_v
     return True
 
 
-def verify_v2(connection: sqlite3.Connection, *, allow_v3: bool = False, allow_v4: bool = False, allow_v5: bool = False) -> bool:
-    if not verify_v1(connection, allow_v2=True, allow_v3=allow_v3, allow_v4=allow_v4, allow_v5=allow_v5):
+def verify_v2(connection: sqlite3.Connection, *, allow_v3: bool = False, allow_v4: bool = False, allow_v5: bool = False, allow_v6: bool = False) -> bool:
+    if not verify_v1(connection, allow_v2=True, allow_v3=allow_v3, allow_v4=allow_v4, allow_v5=allow_v5, allow_v6=allow_v6):
         return False
     actual = _objects(connection)
     expected_sql = dict(zip(
@@ -377,8 +377,8 @@ _V3_OBJECTS = {
 }
 
 
-def verify_v3(connection: sqlite3.Connection, *, allow_v4: bool = False, allow_v5: bool = False) -> bool:
-    if not verify_v2(connection, allow_v3=True, allow_v4=allow_v4, allow_v5=allow_v5):
+def verify_v3(connection: sqlite3.Connection, *, allow_v4: bool = False, allow_v5: bool = False, allow_v6: bool = False) -> bool:
+    if not verify_v2(connection, allow_v3=True, allow_v4=allow_v4, allow_v5=allow_v5, allow_v6=allow_v6):
         return False
     keys = (
         ("table", "graph_meta"), ("table", "memory_recordings"),
@@ -454,8 +454,8 @@ MIGRATION_4: tuple[str, ...] = (
 )
 
 
-def verify_v4(connection: sqlite3.Connection, *, allow_v5: bool = False) -> bool:
-    if not verify_v3(connection, allow_v4=True, allow_v5=allow_v5):
+def verify_v4(connection: sqlite3.Connection, *, allow_v5: bool = False, allow_v6: bool = False) -> bool:
+    if not verify_v3(connection, allow_v4=True, allow_v5=allow_v5, allow_v6=allow_v6):
         return False
     actual = _objects(connection)
     keys = (
@@ -645,8 +645,8 @@ _V5_OBJECTS = {
 }
 
 
-def verify_v5(connection: sqlite3.Connection) -> bool:
-    if not verify_v4(connection, allow_v5=True):
+def verify_v5(connection: sqlite3.Connection, *, allow_v6: bool = False) -> bool:
+    if not verify_v4(connection, allow_v5=True, allow_v6=allow_v6):
         return False
     actual = _objects(connection)
     keys = (
@@ -676,3 +676,24 @@ def verify_v5(connection: sqlite3.Connection) -> bool:
 
 
 MIGRATIONS[5] = MIGRATION_5
+
+# New schema only; no previously applied migration statement is rewritten.
+from .object_migrations import MIGRATION_6, OBJECTS_6
+
+MIGRATIONS[6] = MIGRATION_6
+
+
+def verify_v6(connection: sqlite3.Connection) -> bool:
+    if not verify_v5(connection, allow_v6=True):
+        return False
+    import re
+    expected = {}
+    for statement in MIGRATION_6:
+        match = re.match(r"CREATE (TABLE|INDEX) (\w+)", statement)
+        if match is None:
+            return False
+        expected[(match[1].lower(), match[2])] = statement
+    if not _matches_sql(_objects(connection), expected):
+        return False
+    return all(connection.execute(f"PRAGMA foreign_key_list({table})").fetchall()
+               for table in ("map_proofs", "map_memberships", "map_relations", "map_relation_proofs", "map_membership_supports"))

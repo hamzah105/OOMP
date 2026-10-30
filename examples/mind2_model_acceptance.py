@@ -13,6 +13,8 @@ model success. All source text in the artifact is fixed, public synthetic text.
 """
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import argparse
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
@@ -89,7 +91,7 @@ def _mode(directory, scope, originals, configuration, provider=None):
     directory.mkdir()
     path = directory / "synthetic.sqlite3"
     sources = SQLiteEventStore(path)
-    _require(sources.initialize() == 5, "schema_version")
+    _require(sources.initialize() == SCHEMA_VERSION, "schema_version")
     for source in originals.values():
         sources.append(scope, source)
     handlers = MindHandlers(path, extraction_configuration=configuration,

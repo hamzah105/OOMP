@@ -7,6 +7,8 @@ Use --db only with a dedicated synthetic database.
 
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import argparse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -86,7 +88,7 @@ def request(query: str, **options) -> RetrievalRequest:
 
 def run(path: Path) -> None:
     events = SQLiteEventStore(path)
-    assert events.initialize() == 5
+    assert events.initialize() == SCHEMA_VERSION
     original = event("project-original", "I am developing a project called OOMP.", JAN1)
     old = event("ram-old-event", "My test computer has 4 GB RAM.", JAN5)
     upgraded = event("ram-upgrade-event", "I upgraded my test computer to 12 GB RAM.", SEP15)

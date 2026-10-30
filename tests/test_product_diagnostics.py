@@ -11,6 +11,7 @@ import sqlite3
 import pytest
 
 from oomp.cli import main
+from oomp.storage.migrations import SCHEMA_VERSION
 from oomp.product.diagnostics import diagnose, inspection_snapshot, synthetic_probe
 from oomp.product.models import Profile
 from oomp.product.profiles import ProfileStore
@@ -30,6 +31,7 @@ def check(report, name):
 def test_synthetic_diagnostic_executes_real_worker_and_source_provenance():
     report = synthetic_probe()
     assert report["source_proofs"] == 1 and report["model_calls"] == 0
+    assert report["schema"] == SCHEMA_VERSION
     assert 0 < report["evidence_bytes"] <= report["budget_bytes"]
 
 

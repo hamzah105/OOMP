@@ -147,7 +147,7 @@ def test_failure_after_trigger_drop_rolls_back_everything(tmp_path,monkeypatch):
     store,_=setup(path)
     plan=store.erase_plan(scope(),"e1")
     import oomp.storage.privacy_store as privacy
-    monkeypatch.setattr(privacy,"verify_v5",lambda _:False)
+    monkeypatch.setattr(privacy,"verify_v6",lambda _:False)
     with pytest.raises(ErasureBlockedError):
         store.erase_confirm(scope(),"e1",plan.plan_digest,confirm=True)
     assert store.get(scope(),"e1") is not None

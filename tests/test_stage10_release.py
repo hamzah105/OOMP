@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import hashlib
 import json
 import sqlite3
@@ -33,7 +35,7 @@ def test_quickstart_refuses_existing_database_without_mutation(tmp_path):
 def test_backup_recovers_a_committed_live_wal_and_schema(tmp_path):
     report = backup_demo(tmp_path / "backup")
     assert report["committed_wal_event_recovered"] and report["restored_events"] == 2
-    assert report["schema"] == 5 and not report["cryptographic_secure_deletion_claimed"]
+    assert report["schema"] == SCHEMA_VERSION and not report["cryptographic_secure_deletion_claimed"]
 
 
 def test_backup_refuses_existing_destination_and_preserves_source(tmp_path):

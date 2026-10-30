@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import json
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -56,7 +58,7 @@ class DeterministicTestProvider:
 
 def _project_database(path: Path):
     events = SQLiteEventStore(path)
-    assert events.initialize() == 5
+    assert events.initialize() == SCHEMA_VERSION
     original = source_event("project-original", "I am developing a project called OOMP.")
     events.append(SCOPE, original)
     result = ExtractionPipeline(path).process_event(SCOPE, original.event_id)
@@ -166,7 +168,7 @@ def test_cli_index_status_and_strict_semantic_hint(tmp_path: Path, capsys):
 
 def _hardware(path: Path, *, old_end, new_end):
     events = SQLiteEventStore(path)
-    assert events.initialize() == 5
+    assert events.initialize() == SCHEMA_VERSION
     old = source_event(
         "hardware-old", "My test computer has 4 GB RAM.",
         when=datetime(2026, 1, 5, tzinfo=timezone.utc),

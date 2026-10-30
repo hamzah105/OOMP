@@ -1,0 +1,23 @@
+{
+  "version": "object-relocation.v1",
+  "synthetic": true,
+  "tenant": "object-public-demo",
+  "namespace": "synthetic",
+  "principal": "fictional-owner",
+  "session": "fictional-relocation",
+  "base_time": "2026-01-02T12:00:00+00:00",
+  "turns": [
+    {"id": "p3-project", "role": "user", "text": "I am developing a project called Cedar."},
+    {"id": "p3-city", "role": "user", "text": "My current city is Karachi."},
+    {"id": "p3-plan", "role": "user", "text": "I'm considering moving from Karachi to Islamabad."},
+    {"id": "p3-candidates", "role": "user", "text": "Lahore and Islamabad are candidates."},
+    {"id": "p3-criterion", "role": "user", "text": "Infrastructure is my relocation criterion for project Cedar."},
+    {"id": "p3-question", "role": "user", "text": "Which destination has better infrastructure?"},
+    {"id": "p3-assistant", "role": "assistant", "text": "You have already moved to Islamabad."},
+    {"id": "p3-hypothetical", "role": "user", "text": "Suppose I moved to Lahore next year."},
+    {"id": "p3-quoted", "role": "user", "text": "My friend said, \"I am moving to Lahore.\""},
+    {"id": "p3-sensitive", "role": "user", "text": "I am discussing political leadership without stating an allegiance."},
+    {"id": "p3-correction", "role": "user", "text": "I've decided not to move this year."},
+    {"id": "p3-rename", "role": "user", "text": "My project Cedar is now called Aspen."}
+  ]
+}

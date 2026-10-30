@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import os
 import sqlite3
 import subprocess
@@ -40,8 +42,8 @@ def test_explicit_init_and_status_are_idempotent(tmp_path: Path) -> None:
     second = cli("storage", "init", "--db", str(database), env_path=environment_database)
     status = cli("storage", "status", "--db", str(database), env_path=environment_database)
     assert first.returncode == second.returncode == status.returncode == 0
-    assert "Schema version: 5" in first.stdout
-    assert "Schema version: 5" in status.stdout
+    assert f"Schema version: {SCHEMA_VERSION}" in first.stdout
+    assert f"Schema version: {SCHEMA_VERSION}" in status.stdout
     assert "Exists: yes" in status.stdout
     assert "Accessible: yes" in status.stdout
     assert "Storage readiness: OK" in status.stdout
@@ -59,7 +61,7 @@ def test_environment_database_path_used_without_explicit_flag(tmp_path: Path) ->
     assert database.is_file()
 
 
-@pytest.mark.parametrize("future_version", [6, 999])
+@pytest.mark.parametrize("future_version", [SCHEMA_VERSION+1, 999])
 def test_future_schema_diagnostic_does_not_migrate(tmp_path: Path, future_version: int) -> None:
     database = tmp_path / "future.sqlite3"
     with closing(sqlite3.connect(database)) as connection:

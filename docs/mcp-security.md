@@ -13,7 +13,7 @@ flowchart LR
     V --> T[Scoped service adapter]
     S --> T
     T --> R[Existing retrieval / temporal graph / source / queue services]
-    R --> D[SQLite v5]
+    R --> D[SQLite schema v6]
     P[Separate host approval key] --> I[Payload-bound ingest approval verification]
     A --> I
     V --> I

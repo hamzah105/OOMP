@@ -1,6 +1,8 @@
 # P1 local operations: trust, privacy and recovery
 
-P1 preserves schema v5 and all MCP approval/authorization contracts. New setup,
+P1 retained schema v5 and all MCP approval/authorization contracts. Current P3
+storage uses additive schema v6 while preserving these authority boundaries;
+see the [object architecture](object-memory-architecture.md). Setup,
 profile and lifecycle operations are **trusted local administrator** commands.
 A CLI scope string is not network authentication. No new model-facing approval,
 policy, backfill or erasure tool exists. [Earlier security model](security-model.md)

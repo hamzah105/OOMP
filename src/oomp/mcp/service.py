@@ -10,6 +10,7 @@ from oomp.domain.models import MemoryEvent
 from oomp.retrieval.contracts import RetrievalRequest, GraphPath, MemoryEvidence
 from oomp.retrieval.engine import RetrievalEngine
 from oomp.storage.sqlite import SQLiteEventStore
+from oomp.storage.migrations import SCHEMA_VERSION
 from oomp.storage.mind_store import SQLiteMindStore
 from oomp.storage.retrieval_store import SQLiteRetrievalStore
 from oomp.storage.graph_store import _valid_at
@@ -28,7 +29,7 @@ class MemoryService:
     def __init__(self, config: ServerConfiguration, resolver: GrantResolver):
         self.config, self.resolver = config, resolver
         status = SQLiteEventStore(config.database).status()
-        if not status.ready or status.schema_version != 5:
+        if not status.ready or status.schema_version != SCHEMA_VERSION:
             raise BoundaryError("storage_unavailable")
         provider = config.embedding.construct_provider() if config.embedding else None
         self.retrieval = RetrievalEngine(config.database, provider=provider)
@@ -150,6 +151,7 @@ class MemoryService:
         space = provider.space if provider is not None else None
         queue = self.mind.status(scope)
         return StatusResult(
+            schema_version=SCHEMA_VERSION,
             read_only="ingest" not in grant.capabilities,
             capabilities=grant.capabilities,
             retrieval_modes=("lexical",) if space is None else ("lexical", "semantic", "hybrid"),

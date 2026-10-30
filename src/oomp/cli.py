@@ -399,6 +399,8 @@ def main(argv: list[str] | None = None) -> int:
     status_parser.add_argument("--db", metavar="PATH", help="database path (overrides OOMP_DB_PATH)")
     memory_parser = subparsers.add_parser("memory", help="extract and inspect local canonical memories")
     memory_commands = memory_parser.add_subparsers(dest="memory_command")
+    from .objects.cli import add_commands
+    add_commands(memory_commands,_graph_timestamp)
     extract_parser = memory_commands.add_parser("extract", help="extract memories from one stored event")
     extract_parser.add_argument("--tenant", required=True)
     extract_parser.add_argument("--namespace", required=True)
@@ -535,6 +537,9 @@ def main(argv: list[str] | None = None) -> int:
         storage_parser.print_help()
         return 0
     if args.command == "memory":
+        from .objects.cli import COMMANDS,run as object_command
+        if args.memory_command in COMMANDS:
+            return object_command(args)
         if args.memory_command == "extract":
             return memory_extract(args.db, args.tenant, args.namespace, args.event_id)
         if args.memory_command == "list":

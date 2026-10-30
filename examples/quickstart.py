@@ -6,6 +6,8 @@ The optional path must be new. Omitting it uses a temporary disposable database.
 """
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import argparse
 import json
 from datetime import datetime, timedelta, timezone
@@ -39,7 +41,7 @@ def run(path: Path, later_turns: int = 12) -> dict:
     if type(later_turns) is not int or not 9 <= later_turns <= 128:
         raise ValueError("later_turns must be 9 to 128")
     events = SQLiteEventStore(path)
-    assert events.initialize() == 5
+    assert events.initialize() == SCHEMA_VERSION
     original = source("early-project", "I am developing a project called ReleaseDemo.")
     events.append(SCOPE, original)
     extraction = ExtractionPipeline(path).process_event(SCOPE, original.event_id)
@@ -56,7 +58,7 @@ def run(path: Path, later_turns: int = 12) -> dict:
     assert original.event_id not in {e.event_id for e in recent}
     reopened = SQLiteEventStore(path)
     assert reopened.get(SCOPE, original.event_id) == original
-    return {"synthetic": True, "schema": 5, "source_events": reopened.count_events(SCOPE),
+    return {"synthetic": True, "schema": SCHEMA_VERSION, "source_events": reopened.count_events(SCOPE),
         "earlier_fact_outside_recent_eight": True, "memory_id": result.memories[0].memory_id,
         "canonical_content": result.memories[0].canonical_content,
         "source_event_ids": list(result.memories[0].source_event_ids),

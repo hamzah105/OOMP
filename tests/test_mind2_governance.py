@@ -1,6 +1,8 @@
 """Security review regressions across quotation, privacy and graph authority."""
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 from datetime import datetime, timezone
 import sqlite3
 
@@ -114,7 +116,7 @@ def test_no_schema_migration_and_backup_reopen_preserve_episode_proofs(tmp_path)
     backup = tmp_path / "backup.sqlite3"
     with sqlite3.connect(path) as source, sqlite3.connect(backup) as destination:
         assert schema(source) == before
-        assert source.execute("PRAGMA user_version").fetchone()[0] == 5
+        assert source.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
         source.backup(destination)
         assert schema(destination) == before
     reopened = SQLiteMemoryStore(backup)

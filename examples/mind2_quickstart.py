@@ -9,6 +9,8 @@ removed after the run. No profiles, TRACE, model service or network is required.
 """
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import argparse
 from datetime import datetime, timedelta, timezone
 import json
@@ -75,7 +77,7 @@ def run(directory: Path):
     database = directory / "synthetic.sqlite3"
     sources = SQLiteEventStore(database)
     schema = sources.initialize()
-    _require(schema == 5, "schema_version")
+    _require(schema == SCHEMA_VERSION, "schema_version")
     for source in originals.values():
         sources.append(scope, source)
     worker = MindWorker(database, scope, extraction_configuration=ExtractionConfiguration(mode="rules"))

@@ -32,7 +32,7 @@ from .errors import (
     StoredEventCorruptionError,
     UnsupportedSchemaVersionError,
 )
-from .migrations import MIGRATIONS, SCHEMA_VERSION, is_empty_unowned_database, user_version, verify_v1, verify_v2, verify_v3, verify_v4, verify_v5
+from .migrations import MIGRATIONS, SCHEMA_VERSION, is_empty_unowned_database, user_version, verify_v1, verify_v2, verify_v3, verify_v4, verify_v5, verify_v6
 
 
 @dataclass(frozen=True)
@@ -167,6 +167,8 @@ class SQLiteEventStore:
             raise StorageCorruptionError("SQLite retrieval schema does not match version 4")
         if version == 5 and not verify_v5(connection):
             raise StorageCorruptionError("SQLite mind schema does not match version 5")
+        if version == 6 and not verify_v6(connection):
+            raise StorageCorruptionError("SQLite object schema does not match version 6")
 
     @staticmethod
     def _set_wal_and_synchronous(connection: sqlite3.Connection) -> None:
@@ -197,6 +199,8 @@ class SQLiteEventStore:
                 raise StorageCorruptionError("SQLite retrieval schema does not match version 4")
             if version == 5 and not verify_v5(connection):
                 raise StorageCorruptionError("SQLite mind schema does not match version 5")
+            if version == 6 and not verify_v6(connection):
+                raise StorageCorruptionError("SQLite object schema does not match version 6")
             self._set_wal_and_synchronous(connection)
             connection.execute("BEGIN IMMEDIATE")
             try:
@@ -217,6 +221,8 @@ class SQLiteEventStore:
                     raise StorageCorruptionError("SQLite retrieval schema does not match version 4")
                 if version == 5 and not verify_v5(connection):
                     raise StorageCorruptionError("SQLite mind schema does not match version 5")
+                if version == 6 and not verify_v6(connection):
+                    raise StorageCorruptionError("SQLite object schema does not match version 6")
                 for target in range(version + 1, SCHEMA_VERSION + 1):
                     for statement in MIGRATIONS[target]:
                         connection.execute(statement)
@@ -231,6 +237,8 @@ class SQLiteEventStore:
                         raise StorageCorruptionError("SQLite retrieval schema does not match version 4")
                     if target == 5 and not verify_v5(connection):
                         raise StorageCorruptionError("SQLite mind schema does not match version 5")
+                    if target == 6 and not verify_v6(connection):
+                        raise StorageCorruptionError("SQLite object schema does not match version 6")
                 self._require_schema(connection)
                 connection.execute("COMMIT")
             except BaseException:
@@ -256,22 +264,26 @@ class SQLiteEventStore:
                 if version == 1:
                     if not verify_v1(connection):
                         return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
-                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 5 is needed")
+                    return StorageStatus(self.path, True, True, version, journal, False, f"schema upgrade to version {SCHEMA_VERSION} is needed")
                 if version == 2:
                     if not verify_v2(connection):
                         return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
-                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 5 is needed")
+                    return StorageStatus(self.path, True, True, version, journal, False, f"schema upgrade to version {SCHEMA_VERSION} is needed")
                 if version == 3:
                     if not verify_v3(connection):
                         return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
-                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 5 is needed")
+                    return StorageStatus(self.path, True, True, version, journal, False, f"schema upgrade to version {SCHEMA_VERSION} is needed")
                 if not _fts5_available():
                     return StorageStatus(self.path, True, True, version, journal, False, "SQLite FTS5 is unavailable")
                 if version == 4 and not verify_v4(connection):
                     return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
                 if version == 4:
-                    return StorageStatus(self.path, True, True, version, journal, False, "schema upgrade to version 5 is needed")
-                if not verify_v5(connection):
+                    return StorageStatus(self.path, True, True, version, journal, False, f"schema upgrade to version {SCHEMA_VERSION} is needed")
+                if version == 5:
+                    if not verify_v5(connection):
+                        return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
+                    return StorageStatus(self.path, True, True, version, journal, False, f"schema upgrade to version {SCHEMA_VERSION} is needed")
+                if not verify_v6(connection):
                     return StorageStatus(self.path, True, True, version, journal, False, "schema structure is invalid")
                 return StorageStatus(self.path, True, True, version, journal, True, "ready")
         except (sqlite3.Error, OSError, StorageError):

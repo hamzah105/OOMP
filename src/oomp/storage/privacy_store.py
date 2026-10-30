@@ -22,7 +22,7 @@ from oomp.ingestion.extraction import DeterministicExtractor, eligibility_reason
 from .errors import StorageError, ScopeMismatchError
 from .memory_store import SQLiteMemoryStore, _contains_name, _memory_fingerprint
 from .graph_store import _source_retracted
-from .migrations import MIGRATION_1, verify_v5
+from .migrations import MIGRATION_1, verify_v5, verify_v6, user_version
 from .mind_store import SQLiteMindStore
 from .sqlite import _authorized, _canonical_json, _timestamp, _translate_sqlite_errors
 
@@ -568,7 +568,7 @@ class SQLitePrivacyStore(SQLiteMindStore):
             )
             if connection.execute("PRAGMA foreign_key_check").fetchone() is not None:
                 raise ErasureBlockedError("foreign_key_dependency")
-            if not verify_v5(connection):
+            if not (verify_v6(connection) if user_version(connection) >= 6 else verify_v5(connection)):
                 raise ErasureBlockedError("schema_guard_failed")
             return ErasureResult(
                 operation_id,event_id,len(plan.delete_memory_ids),

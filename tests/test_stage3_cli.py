@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import json
 import os
 import sqlite3
@@ -43,7 +45,7 @@ def source() -> MemoryEvent:
 
 def test_extract_and_list_hide_content_until_opted_in(tmp_path: Path) -> None:
     database = tmp_path / "cli.sqlite3"
-    assert SQLiteEventStore(database).initialize() == 5
+    assert SQLiteEventStore(database).initialize() == SCHEMA_VERSION
     SQLiteEventStore(database).append(SCOPE, source())
     extract = cli(
         "memory", "extract", "--tenant", SCOPE.tenant_id, "--namespace", SCOPE.namespace,

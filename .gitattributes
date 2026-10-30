@@ -1,4 +1,5 @@
 # New frozen acquisition fixtures must hash identically on Windows and Linux.
 benchmarks/mind2/fixtures/v1/*.json text eol=lf
+examples/fixtures/object_relocation_v1.json text eol=lf
 # Preserve the original measured artifact bytes and their recorded checksums.
 benchmarks/mind2/results/**/*.json -text
