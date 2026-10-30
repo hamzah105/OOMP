@@ -87,7 +87,9 @@ class ProfileStore:
                 "host_project_files_modified": [], "credentials": "references only; values never displayed",
                 "services_started": False, "retention": "operator managed; no automatic backfill or deletion",
                 "mode": profile.mode, "transport": profile.transport, "mind": profile.mind, "read_source": profile.read_source,
-                "publication": profile.publication}
+                "publication": profile.publication,
+                "extraction": profile.extraction.model_dump(mode="json") if profile.extraction else {"mode": "legacy"},
+                "extraction_route": "explicit literal-loopback only" if profile.extraction and profile.extraction.mode == "local-llm" else "offline"}
 
     def _generation(self, profile: Profile):
         directory = self.directory(profile.name)
@@ -193,7 +195,7 @@ class ProfileStore:
             old = self.load(profile.name)
             # Changing identity/data/write authority requires another explicit
             # onboarding profile; it is not a silent config migration or rebind.
-            mutable = {"port", "mind", "provider", "transport"}
+            mutable = {"port", "mind", "provider", "transport", "extraction"}
             before, after = old.model_dump(mode="json"), profile.model_dump(mode="json")
             if any(before[k] != after[k] for k in before.keys() - mutable):
                 raise ProductError("identity_change_requires_new_profile")

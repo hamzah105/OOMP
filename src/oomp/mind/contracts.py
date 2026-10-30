@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -99,6 +100,9 @@ class MindJob(ContractModel):
                 EmbeddingSpace.model_validate(dict(raw))
             elif "space" in self.config:
                 raise ValueError("embedding space requires explicit opt-in")
+        elif self.job_type is JobType.EXTRACT_EVENT and set(self.config) == {"understanding"}:
+            if not isinstance(self.config["understanding"], str) or not re.fullmatch(r"[a-f0-9]{64}", self.config["understanding"]):
+                raise ValueError("invalid understanding configuration identity")
         elif self.config:
             raise ValueError("this job type does not accept configuration")
         return self

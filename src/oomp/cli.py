@@ -452,6 +452,8 @@ def main(argv: list[str] | None = None) -> int:
         retr.add_argument("--embedding-timeout", type=float, default=15.0)
     from .mind.cli import configure_mind_parser
     configure_mind_parser(subparsers)
+    from .understanding.cli import configure as configure_understanding
+    configure_understanding(subparsers)
     from .domain.enums import RelationshipType
 
     graph_parser = subparsers.add_parser("graph", help="inspect and link local memory graph records")
@@ -488,6 +490,9 @@ def main(argv: list[str] | None = None) -> int:
     from .mcp.cli import configure_parser as configure_mcp_parser
     mcp_parser = configure_mcp_parser(subparsers)
     args = parser.parse_args(argv)
+    if args.command == "understand":
+        from .understanding.cli import command as understanding_command
+        return understanding_command(args)
     from .product.cli import COMMANDS as product_commands
     if args.command in product_commands:
         from .product.cli import command as product_command

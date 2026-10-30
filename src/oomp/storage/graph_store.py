@@ -75,7 +75,12 @@ def _source_retracted(
         sql += " AND recorded_at<=?"
         args.append(_timestamp(known_at))
     sql += " LIMIT 1"
-    return connection.execute(sql, args).fetchone() is not None
+    if connection.execute(sql, args).fetchone() is not None:
+        return True
+    from oomp.understanding.episodes import source_retracted, source_acquired
+    return source_retracted(connection, scope, event_id, known_at) and source_acquired(
+        connection, scope, event_id, known_at,
+    )
 
 
 def _edge_endorsed(
@@ -97,18 +102,14 @@ def _edge_endorsed(
         )
 
     def has_endorsed_source(memory_id: str) -> bool:
-        sql = """SELECT 1 FROM memory_sources s
-                 WHERE s.tenant_id=? AND s.namespace=? AND s.memory_id=?
-                   AND NOT EXISTS (
-                     SELECT 1 FROM mind_retractions r
-                     WHERE r.tenant_id=s.tenant_id AND r.namespace=s.namespace
-                       AND r.memory_id=s.memory_id AND r.event_id=s.event_id"""
-        args: list[object] = [scope.tenant_id, scope.namespace, memory_id]
-        if known_at is not None:
-            sql += " AND r.recorded_at<=?"
-            args.append(_timestamp(known_at))
-        sql += ") LIMIT 1"
-        return connection.execute(sql, args).fetchone() is not None
+        rows = connection.execute(
+            """SELECT event_id FROM memory_sources
+               WHERE tenant_id=? AND namespace=? AND memory_id=? LIMIT ?""",
+            (scope.tenant_id, scope.namespace, memory_id, _MAX_EVIDENCE + 1),
+        ).fetchall()
+        if len(rows) > _MAX_EVIDENCE:
+            raise GraphLimitError("endorsement evidence exceeds complete bound")
+        return any(not _source_retracted(connection, scope, memory_id, row["event_id"], known_at) for row in rows)
 
     ids = edge.source_event_ids
     if edge.relationship_type is RelationshipType.SUPERSEDES:

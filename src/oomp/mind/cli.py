@@ -11,7 +11,7 @@ from oomp.domain.models import AuthorizedScope
 
 def _scope(args) -> AuthorizedScope:
     return AuthorizedScope(
-        tenant_id=args.tenant, namespace=args.namespace, principal_id="local-cli",
+        tenant_id=args.tenant, namespace=args.namespace, principal_id=args.principal,
     )
 
 
@@ -42,6 +42,7 @@ def configure_mind_parser(subparsers) -> None:
         cmd.add_argument("--db", required=True, metavar="PATH")
         cmd.add_argument("--tenant", required=True)
         cmd.add_argument("--namespace", required=True)
+        cmd.add_argument("--principal", default="local-cli")
     created["backfill"].add_argument("--limit", type=int, default=100)
     created["enqueue"].add_argument(
         "--type", required=True,
@@ -87,6 +88,9 @@ def configure_mind_parser(subparsers) -> None:
     for name in ("run-once", "work"):
         created[name].add_argument("--auto-embed", action="store_true")
         created[name].add_argument("--max-pending", type=int, default=1000)
+        created[name].add_argument("--extraction-mode", choices=("legacy", "rules", "local-llm"), default="legacy")
+        created[name].add_argument("--extraction-model")
+        created[name].add_argument("--extraction-endpoint", default="http://127.0.0.1:11434")
 
 
 def _provider(args):
@@ -134,9 +138,15 @@ def mind_command(args) -> int:
             )
             result = {"job_id": job.job_id, "status": job.status.value}
         elif command in {"run-once", "work"}:
+            from oomp.understanding.contracts import ExtractionConfiguration
+            if args.extraction_mode == "legacy" and args.extraction_model:
+                raise ValueError("extraction_mode_required")
+            extraction = None if args.extraction_mode == "legacy" else ExtractionConfiguration(
+                mode=args.extraction_mode, model=args.extraction_model, endpoint=args.extraction_endpoint)
             worker = MindWorker(
                 args.db, scope, embedding_provider=_provider(args),
                 auto_embed_on_extract=args.auto_embed, max_pending=args.max_pending,
+                extraction_configuration=extraction,
             )
             if command == "run-once":
                 result = worker.run_once(max_jobs=args.max_jobs)

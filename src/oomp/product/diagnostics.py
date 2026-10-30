@@ -122,6 +122,8 @@ def diagnose(store, name=None, *, full=False):
     except sqlite3.Error:
         add("sqlite.fts5", "FAIL", "fts5_unavailable", "Use a Python SQLite build with FTS5.")
     profile = None
+    add("extraction.rules", "PASS", "rules_extractor_available")
+    add("extraction.validator", "PASS", "mind2_validator_available")
     if full or name is not None:
         try:
             profile = store.load(name or "local")
@@ -160,11 +162,31 @@ def diagnose(store, name=None, *, full=False):
                     add("queue.offline", "WARN" if queue["failed"] or queue["events_pending_extraction"] else "PASS",
                         "offline_queue_counts", details={k: queue[k] for k in ("failed", "queued", "events_pending_extraction",
                             "outbox_pending", "oldest_pending_age_seconds")})
+                    with closing(sqlite3.connect(snapshot)) as connection:
+                        degraded = connection.execute(
+                            """SELECT COUNT(DISTINCT job_id) FROM mind_maintenance_audit
+                               WHERE tenant_id=? AND namespace=? AND operation_type='mind2.extraction_degraded'""",
+                            (profile.tenant, profile.namespace)).fetchone()[0]
+                        extraction_failed = connection.execute(
+                            """SELECT COUNT(*) FROM mind_jobs WHERE tenant_id=? AND namespace=?
+                               AND job_type='extract_event' AND status='failed'""",
+                            (profile.tenant, profile.namespace)).fetchone()[0]
+                        extraction_pending = connection.execute(
+                            """SELECT COUNT(*) FROM mind_jobs WHERE tenant_id=? AND namespace=?
+                               AND job_type='extract_event' AND status IN ('queued','running','retry_wait')""",
+                            (profile.tenant, profile.namespace)).fetchone()[0]
+                    add("extraction.queue", "WARN" if degraded or extraction_failed or extraction_pending else "PASS",
+                        "extraction_queue_counts", details={"pending": queue["events_pending_extraction"],
+                            "pending_extraction_jobs": extraction_pending, "failed_extraction_jobs": extraction_failed,
+                            "historical_degraded_jobs": degraded})
         except ProductError as error:
             outcome = "FAIL" if error.code == "database_missing" else "NOT TESTED"
             add("storage", outcome, error.code, "Use live authenticated MCP status, or stop writers and inspect a consistent offline backup.")
         except Exception:
             add("storage", "FAIL", "storage_invalid_or_unsupported", "Review the path/schema; no repair was attempted.")
+        if not any(check["id"] == "extraction.queue" for check in checks):
+            add("extraction.queue", "NOT TESTED", "extraction_offline_snapshot_unavailable",
+                "Use live authenticated queue status or a consistent stopped backup.")
         try:
             runtime = control(store, profile.name)
         except Exception:
@@ -206,6 +228,44 @@ def diagnose(store, name=None, *, full=False):
                     "Start the profile, install [mcp], and check credential references/port ownership.")
         else:
             add("mcp", "NOT TESTED", "stdio_is_host_owned", "Run oomp connect from a compatible SDK host; up does not impersonate that host.")
+        extraction = profile.extraction
+        add("extraction.configured", "PASS" if extraction and extraction.mode == "local-llm" else "NOT TESTED",
+            "local_extraction_configured" if extraction and extraction.mode == "local-llm" else "no_local_extraction_selected",
+            details={"mode": extraction.mode if extraction else "legacy"})
+        add("extraction.episodes", "PASS" if extraction and extraction.retain_episodes else "NOT TESTED",
+            "episodic_summarization_available" if extraction and extraction.retain_episodes else "episodic_retention_not_selected")
+        if extraction and extraction.mode == "local-llm":
+            from oomp.understanding.providers import OllamaExtractor
+            from oomp.understanding.transport import ExtractionUnavailable
+            try:
+                probe_config = extraction.model_copy(update={"timeout_seconds": min(3, extraction.timeout_seconds)})
+                provider = OllamaExtractor(probe_config)
+                provider.reachable()
+                add("extraction.reachable", "PASS", "configured_extraction_model_reachable")
+                if full:
+                    from oomp.domain.models import MemoryEvent, SourceReference
+                    from oomp.understanding.validator import CandidateValidator
+                    now = datetime.now(timezone.utc)
+                    sample = MemoryEvent(event_id="mind2-capability-probe", tenant_id=profile.tenant,
+                        namespace=profile.namespace, event_type="user_message", source_type="user",
+                        content="I prefer concise explanations.", occurred_at=now, ingested_at=now,
+                        source_reference=SourceReference(source_system="synthetic-diagnostic",
+                            external_event_id="mind2-capability-probe", timestamp=now))
+                    proposed = provider.propose(profile.scope, sample)
+                    accepted = CandidateValidator(probe_config).validate(profile.scope, sample, proposed)
+                    if not accepted:
+                        raise ExtractionUnavailable("extraction_capability_unverified")
+                    add("extraction.capability", "PASS", "synthetic_extraction_and_validation_executed")
+                else:
+                    add("extraction.capability", "NOT TESTED", "full_diagnostic_required")
+            except Exception:
+                if not any(check["id"] == "extraction.reachable" for check in checks):
+                    add("extraction.reachable", "WARN", "configured_extraction_model_unreachable")
+                add("extraction.capability", "WARN", "extraction_unavailable_or_capability_unverified",
+                    "Rules continue. Review the independently operated model service; no downloads are performed.")
+        else:
+            add("extraction.reachable", "NOT TESTED", "no_local_extraction_selected")
+            add("extraction.capability", "NOT TESTED", "no_local_extraction_selected")
         if profile.provider is None:
             add("provider", "NOT TESTED", "lexical_only_no_provider_selected")
         else:

@@ -52,6 +52,13 @@ def configure(subparsers, doctor):
             parser.add_argument("--embedding-dimension", type=int)
             parser.add_argument("--embedding-endpoint", default="http://127.0.0.1:11434")
             parser.add_argument("--no-provider", action="store_true")
+            parser.add_argument("--extraction-mode", choices=("legacy", "rules", "local-llm"))
+            parser.add_argument("--extraction-model")
+            parser.add_argument("--extraction-endpoint")
+            parser.add_argument("--extraction-timeout", type=int)
+            parser.add_argument("--retain-episodes", action=argparse.BooleanOptionalAction, default=None)
+            parser.add_argument("--sensitive-episodes", action=argparse.BooleanOptionalAction, default=None)
+            parser.add_argument("--exclude-memory-term", action="append", default=None)
         if name == "onboard":
             parser.add_argument("--project")
             parser.add_argument("--adapter", choices=("standalone", "generic-mcp", "trace"))
@@ -106,6 +113,27 @@ def _confirmed(args, ui):
     return True
 
 
+def _extraction(args, original=None):
+    from oomp.understanding.contracts import ExtractionConfiguration
+    names = {"extraction_mode": "mode", "extraction_model": "model", "extraction_endpoint": "endpoint",
+             "extraction_timeout": "timeout_seconds", "retain_episodes": "retain_episodes",
+             "sensitive_episodes": "sensitive_episodes", "exclude_memory_term": "exclude_terms"}
+    changes = {field: getattr(args, key) for key, field in names.items() if getattr(args, key, None) is not None}
+    if not changes:
+        return original
+    if changes.get("mode") == "legacy":
+        if len(changes) != 1:
+            raise ProductError("legacy_extraction_has_no_model_settings")
+        return None
+    if original is None and "model" in changes and changes.get("mode") != "local-llm":
+        raise ProductError("extraction_mode_required")
+    data = original.model_dump(mode="json") if original else ExtractionConfiguration().model_dump(mode="json")
+    data.update(changes)
+    if data["mode"] == "rules":
+        data["model"] = None
+    return ExtractionConfiguration.model_validate(data)
+
+
 def _onboard(args, store, ui):
     from .discovery import discover, project_fingerprint
     if args.resume:
@@ -115,16 +143,50 @@ def _onboard(args, store, ui):
             store.resume(name)
             ui.line("PASS", "Profile setup resumed.")
         return 0
-    inspection = discover(args.project)
     interactive = sys.stdin.isatty() and not args.yes and not args.dry_run
+    project = args.project
+    try:
+        inspection = discover(project)
+    except ProductError as error:
+        if not interactive:
+            raise
+        ui.line("WARN", error.code + ": choose an existing project directory.")
+        project = None
+        inspection = discover(None)
     if not args.json:
         ui.welcome()
         ui.preview({"discovery": inspection})
     name = args.profile or (ui.text("Profile name", "local") if interactive else "local")
     adapter = args.adapter or (inspection["kind"] if inspection["kind"] != "unknown" else None)
     if interactive:
-        adapter = ui.choose("Connection type (generic templates do not certify arbitrary frameworks)",
-                            ("standalone", "generic-mcp", "trace"), adapter or "standalone")
+        while True:
+            adapter = ui.choose("Connection type (generic templates do not certify arbitrary frameworks)",
+                                ("standalone", "generic-mcp", "trace"), adapter or "standalone")
+            if adapter == "standalone":
+                project, inspection = None, discover(None)
+                break
+            back = False
+            while True:
+                project = project or ui.text("Project directory")
+                try:
+                    if not project:
+                        raise ProductError("project_missing")
+                    inspection = discover(project)
+                    if adapter == "trace" and inspection["kind"] != "trace":
+                        raise ProductError("trace_adapter_unavailable")
+                    ui.preview({"project_discovery": inspection})
+                    break
+                except ProductError as error:
+                    ui.line("WARN", error.code + ": select an existing directory with the selected adapter's integration files.")
+                    action = ui.choose("Project discovery recovery", ("Choose another directory", "Back to connection type", "Cancel"))
+                    project = None
+                    if action == "Cancel":
+                        raise ProductError("cancelled_no_changes")
+                    if action == "Back to connection type":
+                        back = True
+                        break
+            if not back:
+                break
     if adapter is None:
         raise ProductError("unknown_project_choose_generic_or_standalone")
     if adapter == "trace" and inspection["kind"] != "trace":
@@ -155,6 +217,16 @@ def _onboard(args, store, ui):
             from oomp.mcp.configuration import EmbeddingConfiguration
             provider = EmbeddingConfiguration(model=ui.text("Already installed embedding model"),
                 dimension=int(ui.text("Expected embedding dimension")), version="ollama-api-embed-v1")
+    extraction = _extraction(args)
+    if args.extraction_mode is None and extraction is None:
+        from oomp.understanding.contracts import ExtractionConfiguration
+        extraction = ExtractionConfiguration()
+    if interactive and args.extraction_mode is None:
+        if ui.choose("Memory extraction (separate from embeddings)", ("Rules-only (offline)", "Local Ollama (existing model)")) != "Rules-only (offline)":
+            from oomp.understanding.contracts import ExtractionConfiguration
+            extraction = ExtractionConfiguration(mode="local-llm",
+                model=ui.text("Already installed text-generation model"),
+                endpoint=ui.text("Literal-loopback extraction endpoint", "http://127.0.0.1:11434"))
     publication = args.publication
     if interactive and adapter == "trace":
         publication = ui.choose("Manage the approved TRACE publication worker?", ("No", "Yes")) == "Yes"
@@ -166,12 +238,12 @@ def _onboard(args, store, ui):
             args.mongo_database = args.mongo_database or ui.text("Explicit Mongo database name (not inferred)")
     if publication and not args.approve_host:
         raise ProductError("publication_approval_required")
-    profile = Profile(name=name, adapter=adapter, project=str(safe_path(args.project)) if args.project and adapter != "standalone" else None,
+    profile = Profile(name=name, adapter=adapter, project=str(safe_path(project)) if project and adapter != "standalone" else None,
         database=database, transport=transport, mode=mode, tenant=tenant, namespace=namespace,
         principal=principal, port=8765 if port is None else port, mind=mind, read_source=read_source, provider=provider,
-        secret_source=args.secret_source, owner_id=owner if adapter == "trace" else None,
+        extraction=extraction, secret_source=args.secret_source, owner_id=owner if adapter == "trace" else None,
         host_origin=args.host_origin, publication=publication, host_python=args.host_python,
-        approved_project=project_fingerprint(args.project) if publication else {},
+        approved_project=project_fingerprint(project) if publication else {},
         mongo_uri_env=args.mongo_uri_env, mongo_database=args.mongo_database)
     plan = {**store.preview(profile), "discovery": inspection,
             "event_policy": "no backfill; exact signed host-approved events only" if mode == "trusted-ingest" else "no ingestion grant"}
@@ -204,6 +276,11 @@ def command(args):
         if args.command in {"down", "status", "logs"}:
             from .lifecycle import control, stop, logs
             result = logs(store, args.profile) if args.command == "logs" else stop(store, args.profile) if args.command == "down" else control(store, args.profile)
+            if args.command == "status":
+                selected = store.load(args.profile)
+                result["extraction"] = {"mode": selected.extraction.mode if selected.extraction else "legacy",
+                    "rules_available": True, "validator": "mind2.validator.v1",
+                    "episodes_enabled": bool(selected.extraction and selected.extraction.retain_episodes)}
             if args.json or args.command == "logs":
                 print(json.dumps(result))
             else:
@@ -217,6 +294,9 @@ def command(args):
             provider = _provider(args, profile.provider)
             if provider != profile.provider:
                 changes["provider"] = provider.model_dump(mode="json") if provider else None
+            extraction = _extraction(args, profile.extraction)
+            if extraction != profile.extraction:
+                changes["extraction"] = extraction.model_dump(mode="json") if extraction else None
             if not changes and sys.stdin.isatty() and not args.json and not args.dry_run:
                 selected = ui.choose("Setting to change", ("Inspect only", "Port", "Mind worker"))
                 if selected == "Port":
@@ -246,6 +326,7 @@ def command(args):
             if not args.json:
                 ui.welcome()
                 ui.line("", "Starting owned services; readiness requires an authenticated MCP check.")
+                ui.line("", "Memory extraction: " + (profile.extraction.mode if profile.extraction else "legacy") + ".")
             result = start(store, profile, background=args.background)
             if isinstance(result, int):
                 return result

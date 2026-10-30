@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
 import uuid
 from collections.abc import Callable, Sequence
@@ -161,6 +162,11 @@ class SQLiteMindStore(SQLiteEventStore):
         ).fetchone()
         if row is None:
             raise ScopeMismatchError("job target is absent from authorized scope")
+        if job_type is JobType.EXTRACT_EVENT and set(config) == {"understanding"}:
+            identity = config["understanding"]
+            if not isinstance(identity, str) or not re.fullmatch(r"[a-f0-9]{64}", identity):
+                raise ValueError("invalid understanding configuration identity")
+            return {"understanding": identity}
         if job_type is not JobType.MAINTAIN_INDEX:
             if config:
                 raise ValueError("job configuration is unsupported for this type")
@@ -527,6 +533,15 @@ class SQLiteMindStore(SQLiteEventStore):
                 recorded_at=now,status="completed",affected_count=affected,
                 target_type=job.target_type,target_id=job.target_id,
             )
+            for key in ("extraction_degraded", "model_calls", "model_rejected"):
+                if result_counts.get(key):
+                    self._audit(
+                        connection, scope, job_id=job_id, operation_type="mind2." + key,
+                        policy_version="mind2.v1", actor_id=worker_id, recorded_at=now,
+                        status="degraded" if key == "extraction_degraded" else "completed",
+                        error_code="extraction_error" if key == "extraction_degraded" else None,
+                        affected_count=result_counts[key], target_type=job.target_type, target_id=job.target_id,
+                    )
             return True
 
     @_translate_sqlite_errors

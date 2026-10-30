@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Mind 2 separately recorded draft opportunity labels",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "synthetic",
+    "label_status",
+    "sessions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "mind2.annotations.v1"
+    },
+    "synthetic": {
+      "const": true
+    },
+    "label_status": {
+      "type": "string"
+    },
+    "sessions": {
+      "type": "array",
+      "minItems": 30,
+      "items": {
+        "type": "object",
+        "required": [
+          "session_id",
+          "theme",
+          "events"
+        ],
+        "properties": {
+          "events": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "required": [
+                "event_id",
+                "role",
+                "text",
+                "labels"
+              ],
+              "properties": {
+                "labels": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "opportunity_id",
+                      "source_event_id",
+                      "start",
+                      "end",
+                      "quote",
+                      "expected_retention",
+                      "useful_candidate",
+                      "useful_episode",
+                      "review_status"
+                    ],
+                    "properties": {
+                      "expected_retention": {
+                        "enum": [
+                          "canonical",
+                          "episodic-only",
+                          "review",
+                          "excluded"
+                        ]
+                      },
+                      "review_status": {
+                        "const": "draft-pending-independent-human-review"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

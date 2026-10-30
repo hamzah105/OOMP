@@ -22,9 +22,15 @@ class MindHandlers:
         self, path: str | PathLike[str] | None = None, *,
         embedding_provider=None, auto_embed_on_extract: bool = False,
         max_pending: int = 1000, clock=None,
+        extraction_configuration=None, extraction_provider=None,
     ) -> None:
         self.path = path
         self.pipeline = ExtractionPipeline(path)
+        self.understanding = None
+        if extraction_configuration is not None:
+            from oomp.understanding.engine import UnderstandingEngine
+            self.understanding = UnderstandingEngine(path, extraction_configuration,
+                provider=extraction_provider, clock=clock)
         self.retrieval = RetrievalEngine(path, provider=embedding_provider)
         self.scheduler = MindScheduler(path, max_pending=max_pending, clock=clock)
         self.store = SQLiteMindStore(path, max_pending=max_pending, clock=clock)
@@ -45,9 +51,16 @@ class MindHandlers:
         if current.policy_version != POLICY_VERSIONS[current.job_type]:
             raise ValueError("job handler policy version is unsupported")
         if current.job_type is JobType.EXTRACT_EVENT:
-            if current.target_type != "event" or current.config:
+            allowed_config = ({"understanding": self.understanding.config.identity}
+                              if self.understanding is not None else None)
+            if current.target_type != "event" or (current.config and dict(current.config) != allowed_config):
                 raise ValueError("extract job target or configuration is unsupported")
-            result = self.pipeline.process_event(authorized, current.target_id)
+            acquisition = None
+            if self.understanding is not None:
+                acquisition = self.understanding.process_event(authorized, current.target_id, job=current)
+                result = acquisition.processing
+            else:
+                result = self.pipeline.process_event(authorized, current.target_id)
             if result.memory_ids:
                 index_config = (
                     {"include_embeddings": True,
@@ -68,6 +81,15 @@ class MindHandlers:
                 "memories_created": result.memories_created,
                 "memories_reused": result.memories_reused,
                 "evidence_links_added": result.evidence_links_added,
+                **({
+                    "episode_revisions": acquisition.summary_revisions,
+                    "model_calls": acquisition.model_calls,
+                    "extraction_degraded": int(acquisition.degraded),
+                    "model_proposals": acquisition.model_proposals,
+                    "model_accepted": acquisition.model_accepted,
+                    "model_rejected": acquisition.model_rejected,
+                    "model_refinements": acquisition.model_refinements,
+                } if acquisition is not None else {}),
             }
         if current.job_type is JobType.MAINTAIN_INDEX:
             if current.target_type != "event":

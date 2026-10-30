@@ -1,0 +1,26 @@
+{
+  "version": "mind2.rules-concordance.v1",
+  "reference_sha256": "1ca9c1dc61215a225cd2aacd343e380b519bec2689c8df85745219c65bf37254",
+  "sessions": 30,
+  "events": 240,
+  "opportunities": 247,
+  "mismatches": [],
+  "all_recorded_predictions_unchanged": true,
+  "scope": "Current pure rules/validator typed output; fixture retractions/scopes applied. Not a new timing or inference experiment.",
+  "source_sha256": {
+    "src/oomp/understanding/admin.py": "1b9e3355580701efb3d403f1c04c1d08c2c40cc959c83a6dab46f16949b11a43",
+    "src/oomp/understanding/cli.py": "f0fb61f5113a66e0b2519a4465dc5282534d885c9793363201444a17893ad6bb",
+    "src/oomp/understanding/contracts.py": "4c53f0df0a23ee3bf59ee075c1a11f861350915136ec265e47984f11f48f63e0",
+    "src/oomp/understanding/engine.py": "71a9729e34f3edf4a215edf7c0f7ad79e85b1e98f677b7287a5b905237daedf1",
+    "src/oomp/understanding/episodes.py": "df7c7ac2659383bbdf32545a0903e1a39ab16b003a58da28934eb4a247ab716e",
+    "src/oomp/understanding/providers.py": "9b55bdbc24c4b2178405ffa76891d21bcb043f616734ec6ab5b7f74123d2f7dd",
+    "src/oomp/understanding/quoted.py": "56a170c6433416cea757fd7b5ad81a040347650a67ae43a240cb8dd029fa7c4f",
+    "src/oomp/understanding/rules.py": "681792260381e5713cb51c99a134657192c7ca729e9ee45ad9da8b36d261d220",
+    "src/oomp/understanding/storage.py": "5bd7bf2c8392d41cf08fb804260988b1874215c697b932127a4ac70f9f99c83a",
+    "src/oomp/understanding/transport.py": "b45908cf12019b9f3d8ed7364960474c5d52194b22c4a406f4c5ab508c945301",
+    "src/oomp/understanding/validator.py": "2ede9bae3e9ea3c36e138fec61f71ee6a9f02a9fecfe584892e9409f34c2ff7e",
+    "src/oomp/understanding/__init__.py": "f2a389c0aca48a806649f6d4cf6761bb69a915d66d116f4ac81f6a5dcf99396d",
+    "src/oomp/storage/graph_store.py": "8c8d9d4d70bfeacba0e9b0c619fd70f97afc4d62961deee397626ae5b7c67bff",
+    "src/oomp/storage/privacy_store.py": "a55afb00a9b67d8d5d463cf8016ca2d0bfb66376de56137cbf86b9d1b884779c"
+  }
+}
