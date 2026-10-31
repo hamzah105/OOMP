@@ -5,6 +5,8 @@ Use --db only with a dedicated synthetic database. No model or network is used.
 
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import argparse
 from datetime import datetime, timezone
 from pathlib import Path
@@ -71,7 +73,7 @@ def hardware_memory(
 
 def run(path: Path) -> None:
     events = SQLiteEventStore(path)
-    assert events.initialize() == 5
+    assert events.initialize() == SCHEMA_VERSION
     for source in (OLD_EVENT, NEW_EVENT, DISPUTED_EVENT, TOPIC_EVENT):
         assert events.append(SCOPE, source) == source
 

@@ -153,6 +153,6 @@ Active-job capacity is bounded; durable source, outbox, attempt and audit histor
 
 ## Stage 7 MCP boundary
 
-MCP never starts a MindWorker, runs extraction, dispatches the outbox or accepts reviews on connection. A separately approved memory.ingest appends the real immutable source event through Stage 2, creating the schema v5 outbox atomically. Its reply reports persisted event ID, pending/dispatched intake and latest extraction job state independently; acceptance is not extraction completion.
+MCP never starts a MindWorker, runs extraction, dispatches the outbox or accepts reviews on connection. A separately approved memory.ingest appends the real immutable source event through Stage 2, creating an outbox record atomically (the outbox was introduced in schema v5 and is retained in current schema v6). Its reply reports persisted event ID, pending/dispatched intake and latest extraction job state independently; acceptance is not extraction completion.
 
 memory.status exposes scoped queue/index counts and explicitly says that the worker operates as a separate process. Existing CLI worker execution, WAL snapshots and replay guarantees continue while MCP clients read. Retraction, review approval and privileged erasure remain local administrative workflows. MCP reconnects and restarts do not build indexes, create new memory identities or change the database schema. [Integration](mcp-integration.md) and [MCP security](mcp-security.md).

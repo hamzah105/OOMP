@@ -7,6 +7,8 @@ No TRACE, model, user profile, private database or preexisting service is used.
 """
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import argparse
 from datetime import datetime, timezone
 import json
@@ -80,7 +82,7 @@ def run(directory: Path):
         stop(store, "synthetic")
     if not port_available(port):
         raise RuntimeError("owned listener remained after shutdown")
-    report = {"synthetic": True, "version": "0.1.0", "schema": 5, "CLI_checks": checks,
+    report = {"synthetic": True, "version": "0.1.0", "schema": SCHEMA_VERSION, "CLI_checks": checks,
               "separate_processes": ["mcp", "mind"], "authenticated_signed_ingestion": True,
               "source_event_ids": ["p1-synthetic-source"], "restart_preserved_source": True,
               "diagnostics_ok": True, "owned_services_stopped": True, "model_calls": 0,

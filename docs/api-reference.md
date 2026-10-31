@@ -5,7 +5,7 @@ Its diagnostic JSON format and profile settings have format version 1. These are
 operational settings, not a memory database migration or new network authority.
 Existing domain, retrieval, worker and MCP signatures below remain unchanged.
 
-Distribution `oomp-memory`, Python import `oomp`, version 0.1.0, SQLite v5.
+Distribution `oomp-memory`, Python import `oomp`, version 0.1.0, SQLite schema v6.
 This is an alpha API reference, not a promise of 1.0 stability. Public contracts
 below have regression coverage. Private helpers, SQL layout, scheduler internals
 and research-file schemas are experimental implementation details.
@@ -52,6 +52,19 @@ or conflict-approval tool exists. JSON schemas reject extra fields; caller scope
 is never accepted from tool arguments. Default source lookup omits raw content.
 SDK compatibility is `mcp>=2.3.0,<2.4`; actual protocol/client evidence and
 configuration schemas are in [MCP integration](mcp-integration.md).
+
+P3 storage is schema v6. MCP service admission requires a ready database at the
+current supported schema, and current `memory.status`/`mcp check` output reports
+6. The `StatusResult.schema_version` response enum accepts only 5 and 6 so a
+current client can still validate a legacy v5 server response. This does not
+admit or automatically migrate an old database, and future versions remain
+rejected. Clients whose response contract accepts only 5 must upgrade before
+reading v6 status. Grants, capabilities, approval and message shape are unchanged.
+
+`oomp.objects.ObjectMap` provides explicit scoped, bounded build, lookup,
+membership, history, explanation and redacted export. It reuses existing source
+records and does not call a provider or create remote MCP authority. See the
+[object architecture](object-memory-architecture.md) and [CLI/API guide](object-memory-cli.md).
 
 Schema migration version, package version, SDK version and MCP protocol version
 are different numbers. Future 0.1.x fixes should preserve covered behavior where

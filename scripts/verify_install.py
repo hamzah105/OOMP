@@ -5,6 +5,8 @@ The caller chooses an output directory for disposable synthetic evidence.
 """
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import argparse
 import importlib.metadata
 import importlib.util
@@ -50,7 +52,7 @@ def verify(output: Path, expect_core_only: bool = False):
         occurred_at=when, ingested_at=when, source_reference=SourceReference(source_system="release-check",
             external_event_id="installed-wheel-event", timestamp=when))
     path = output / "synthetic.sqlite3"
-    store = SQLiteEventStore(path); assert store.initialize() == 5
+    store = SQLiteEventStore(path); assert store.initialize() == SCHEMA_VERSION
     store.append(scope, event); ExtractionPipeline(path).process_event(scope, event.event_id)
     engine = RetrievalEngine(path); engine.index(scope)
     response = engine.retrieve(scope, RetrievalRequest(tenant_id=scope.tenant_id, namespace=scope.namespace, query="project developing"))
@@ -59,7 +61,7 @@ def verify(output: Path, expect_core_only: bool = False):
     assert response.estimated_token_count == len(response.context_packet.encode()) <= response.token_budget
     assert SQLiteEventStore(path).get(scope, event.event_id) == event
     report = {"version": oomp.__version__, "python": sys.version.split()[0], "installed_from_site_packages": True,
-        "core_only": expect_core_only, "cli_checks": checks, "schema": 5,
+        "core_only": expect_core_only, "cli_checks": checks, "schema": SCHEMA_VERSION,
         "synthetic_flow": "persisted/extracted/indexed/retrieved/reopened", "TRACE_required": False,
         "MCP_installed": importlib.util.find_spec("mcp") is not None, "model_calls": 0}
     (output / "installation.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

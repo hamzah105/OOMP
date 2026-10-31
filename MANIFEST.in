@@ -4,6 +4,7 @@ include requirements-release.txt
 include sample.env .gitignore
 recursive-include src/oomp *.py
 recursive-include examples *.py
+recursive-include examples/fixtures *.json *.md
 recursive-include scripts *.py
 recursive-include benchmarks *.py *.json *.md
 recursive-include docs *.md *.json

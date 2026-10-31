@@ -1,6 +1,8 @@
 """Stage 4 topic hierarchy and projection persistence tests."""
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
@@ -23,7 +25,7 @@ def scope(tenant="t", namespace="n"):
 def topics(tmp_path):
     path = tmp_path / "topics.sqlite3"
     events, memories, store = SQLiteEventStore(path), SQLiteMemoryStore(path), SQLiteTopicStore(path)
-    assert events.initialize() == 5
+    assert events.initialize() == SCHEMA_VERSION
     ref = SourceReference(source_system="test", external_event_id="e1", timestamp=NOW)
     source = MemoryEvent(
         event_id="e1", tenant_id="t", namespace="n",

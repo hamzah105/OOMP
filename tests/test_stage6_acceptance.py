@@ -1,6 +1,8 @@
 """Stage 6 acceptance: populated migrations, processes and bounded recovery."""
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import json
 import multiprocessing
 import os
@@ -31,7 +33,7 @@ from oomp.storage.errors import StorageBusyError, StorageUnavailableError
 from oomp.storage.mind_store import SQLiteMindStore, LostLeaseError, InvalidJobTransitionError
 from oomp.storage.mind_projection_store import SQLiteMindProjectionStore
 from oomp.storage.sqlite import SQLiteEventStore
-from oomp.storage.migrations import verify_v5
+from oomp.storage.migrations import verify_v6
 from oomp.storage.retrieval_store import content_digest
 
 
@@ -95,9 +97,9 @@ def test_populated_genuine_v4_preserves_every_old_table_and_trigger(tmp_path):
         before = {name: sorted(c.execute(f'SELECT * FROM "{name}"').fetchall(), key=repr)
                   for name in names}
         triggers = dict(c.execute("SELECT name,sql FROM sqlite_master WHERE type='trigger'"))
-    assert SQLiteEventStore(path).initialize() == 5
+    assert SQLiteEventStore(path).initialize() == SCHEMA_VERSION
     with closing(sqlite3.connect(path)) as c:
-        assert verify_v5(c) and not c.execute("PRAGMA foreign_key_check").fetchall()
+        assert verify_v6(c) and not c.execute("PRAGMA foreign_key_check").fetchall()
         for name, rows in before.items():
             assert sorted(c.execute(f'SELECT * FROM "{name}"').fetchall(), key=repr) == rows
         for name, sql in triggers.items():

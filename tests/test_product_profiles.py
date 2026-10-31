@@ -1,6 +1,8 @@
 """P1 private configuration, read-only discovery and consent regressions."""
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import hashlib
 import json
 import os
@@ -76,7 +78,7 @@ def test_interrupted_setup_resumes_only_claimed_file_without_secret_rotation(tmp
     assert not (store.directory("test")/"active.json").exists()
     assert store.resume("test") == profile
     assert digest(store.directory("test")/"secrets.json") == secret_hash
-    assert SQLiteEventStore(profile.database).status().schema_version == 5
+    assert SQLiteEventStore(profile.database).status().schema_version == SCHEMA_VERSION
 
 
 def test_interrupted_setup_cannot_adopt_replaced_database(tmp_path, monkeypatch):

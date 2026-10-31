@@ -14,7 +14,7 @@ repository does not claim a reserved or published PyPI name.
 
 ## Implemented today
 
-- SQLite v5 source history, scoped idempotency and additive migrations.
+- SQLite schema v6 source history, scoped idempotency and additive migrations.
 - Conservative offline extraction, canonical identity and explicit project aliases.
 - Source-backed temporal graph/topics and narrow governed RAM conflict/supersession policy.
 - FTS5/BM25 retrieval, optional local Ollama vectors, rank fusion and bounded evidence packing.
@@ -171,6 +171,7 @@ retrieval observations, not universal superiority or final-answer accuracy.
 | --- | --- |
 | Guided setup / one-command operation | [P1 operator guide](https://github.com/hamzah105/OOMP/blob/main/docs/product-onboarding.md), [CLI/diagnostics](https://github.com/hamzah105/OOMP/blob/main/docs/product-cli.md), [P1 evidence](https://github.com/hamzah105/OOMP/blob/main/docs/product-milestone-P1-report.md) |
 | P1 stabilization / P2 acquisition candidate | [P1 stabilization](docs/product-milestone-P1-stabilization.md), [P2 implementation and measured limits](docs/product-milestone-P2-report.md), [Mind 2 benchmark](benchmarks/mind2/README.md) |
+| P3 local object-map review | [Object architecture](docs/object-memory-architecture.md), [offline CLI/quickstart](docs/object-memory-cli.md), [P3 evidence](docs/product-milestone-P3-report.md) |
 | First use / examples | [Getting started](https://github.com/hamzah105/OOMP/blob/main/docs/getting-started.md) |
 | Public interfaces and compatibility | [API reference](https://github.com/hamzah105/OOMP/blob/main/docs/api-reference.md) |
 | Development / providers / migrations | [Developer guide](https://github.com/hamzah105/OOMP/blob/main/docs/developer-guide.md), [Contributing](https://github.com/hamzah105/OOMP/blob/main/CONTRIBUTING.md) |

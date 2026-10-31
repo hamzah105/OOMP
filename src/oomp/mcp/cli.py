@@ -75,6 +75,7 @@ def mcp_command(args):
         config = load_configuration(args.config, args.transport)
         if args.mcp_command == "check":
             from .server import build_server
+            from oomp.storage.migrations import SCHEMA_VERSION
             server = build_server(config)
             grants = ((config.stdio_grant,) if config.transport == "stdio" else config.http_grants)
             for grant in grants:
@@ -82,7 +83,7 @@ def mcp_command(args):
                     raise ValueError("expired grant")
             print(json.dumps({
                 "ready": True, "sdk": sdk_version, "transport": config.transport,
-                "profile": config.profile, "schema_version": 5,
+                "profile": config.profile, "schema_version": SCHEMA_VERSION,
                 "mind_worker_started": False,
             }, separators=(",", ":")))
             return 0

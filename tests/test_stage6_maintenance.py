@@ -1,6 +1,8 @@
 """Offline Stage 6 maintenance, privacy race and operator acceptance tests."""
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import json
 import sqlite3
 import subprocess
@@ -338,7 +340,7 @@ def test_standard_example_runs_fresh_and_again_against_real_sqlite(tmp_path):
                                 capture_output=True, text=True, timeout=60)
         assert result.returncode == 0, result.stderr
         outputs.append(json.loads(result.stdout))
-    assert outputs[0]["schema"] == 5 and outputs[0]["crash_claim_recovered"]
+    assert outputs[0]["schema"] == SCHEMA_VERSION and outputs[0]["crash_claim_recovered"]
     assert outputs[0]["synthetic_provider_outage_seen"]
     assert outputs[0]["erased_synthetic_event_this_run"]
     assert outputs[1]["events_inserted_this_run"] == 0

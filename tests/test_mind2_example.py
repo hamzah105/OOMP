@@ -1,6 +1,8 @@
 """The public offline example must prove its claims and refuse existing storage."""
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import json
 from pathlib import Path
 import subprocess
@@ -24,7 +26,7 @@ def test_mind2_quickstart_acceptance_and_existing_directory_refusal(tmp_path):
         "correction_requires_review", "replay_no_duplicate_growth",
         "focus_preserves_history", "retraction_respected",
     ))
-    assert report["schema"] == 5 and report["extraction_mode"] == "rules"
+    assert report["schema"] == SCHEMA_VERSION and report["extraction_mode"] == "rules"
     assert report["services_started"] is report["existing_private_storage_used"] is False
     before = {file.name: file.read_bytes() for file in directory.iterdir() if file.is_file()}
     refused = subprocess.run(command, text=True, capture_output=True, timeout=30)

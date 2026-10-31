@@ -1,6 +1,8 @@
 """Stage 6 migration, durable intake, scoped claims and lease recovery."""
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import sqlite3
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -18,7 +20,7 @@ from oomp.storage.mind_store import (
 )
 from oomp.storage.migrations import (
     MIGRATION_1, MIGRATION_2, MIGRATION_3, MIGRATION_4, MIGRATION_5,
-    verify_v4, verify_v5,
+    verify_v4, verify_v6,
 )
 from oomp.storage.sqlite import SQLiteEventStore
 
@@ -60,11 +62,11 @@ def test_fresh_and_genuine_v4_migration_preserves_data_and_guards(tmp_path):
         fts=tuple(connection.execute("SELECT * FROM memory_fts_docs").fetchall())
     store=SQLiteMindStore(path)
     assert store.status().schema_version==4 and not store.status().ready
-    assert store.initialize()==5
-    assert store.initialize()==5
+    assert store.initialize()==SCHEMA_VERSION
+    assert store.initialize()==SCHEMA_VERSION
     assert store.status().ready
     with closing(sqlite3.connect(path)) as connection:
-        assert verify_v5(connection)
+        assert verify_v6(connection)
         assert connection.execute("PRAGMA foreign_key_check").fetchall()==[]
         assert tuple(connection.execute("SELECT * FROM events").fetchall())==prior
         assert tuple(connection.execute("SELECT * FROM memory_fts_docs").fetchall())==fts
@@ -97,7 +99,7 @@ def test_failed_v5_migration_rolls_back_exact_v4(tmp_path,monkeypatch):
 def test_future_schema_rejected(tmp_path):
     path=tmp_path/"future.sqlite3"
     with closing(sqlite3.connect(path)) as connection,connection:
-        connection.execute("PRAGMA user_version=6")
+        connection.execute(f"PRAGMA user_version={SCHEMA_VERSION+1}")
     with pytest.raises(UnsupportedSchemaVersionError):
         SQLiteMindStore(path).initialize()
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -41,7 +43,7 @@ def source(event_id: str, content: str, when: datetime = T) -> MemoryEvent:
 
 def db(tmp_path: Path) -> Path:
     path = tmp_path / "mind.sqlite3"
-    assert SQLiteEventStore(path).initialize() == 5
+    assert SQLiteEventStore(path).initialize() == SCHEMA_VERSION
     return path
 
 

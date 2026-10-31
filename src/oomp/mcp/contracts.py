@@ -142,7 +142,10 @@ class QueueInformation(ContractModel):
 
 
 class StatusResult(ContractModel):
-    schema_version: Literal[5] = 5
+    # Accept the historical v5 response when reading old server results. New
+    # servers explicitly report their admitted schema; no future version is
+    # silently accepted by this wire contract.
+    schema_version: Literal[5, 6] = 6
     read_only: StrictBool
     capabilities: tuple[str, ...]
     retrieval_modes: tuple[str, ...]

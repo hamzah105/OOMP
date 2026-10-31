@@ -5,6 +5,8 @@ This example is local administrator code, not an MCP tool. It refuses overwrite.
 """
 from __future__ import annotations
 
+from oomp.storage.migrations import SCHEMA_VERSION
+
 import argparse
 import json
 import os
@@ -59,11 +61,11 @@ def run(directory: Path) -> dict:
         backup_new(original_path, backup_path)
         backup_new(backup_path, restored_path)
     restored = SQLiteEventStore(restored_path)
-    assert restored.status().ready and restored.status().schema_version == 5
+    assert restored.status().ready and restored.status().schema_version == SCHEMA_VERSION
     assert restored.get(SCOPE, first.event_id) == first
     assert restored.get(SCOPE, second.event_id) == second
     return {"synthetic": True, "source_events": 2, "restored_events": restored.count_events(SCOPE),
-        "committed_wal_event_recovered": True, "schema": 5, "backup_api": "sqlite3.Connection.backup",
+        "committed_wal_event_recovered": True, "schema": SCHEMA_VERSION, "backup_api": "sqlite3.Connection.backup",
         "overwrite_allowed": False, "cryptographic_secure_deletion_claimed": False}
 
 

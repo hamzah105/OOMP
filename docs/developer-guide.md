@@ -39,7 +39,7 @@ mirror a low-impact implementation or inflate counts without checking behavior.
 
 ## Migrations and providers
 
-Schema is v5. Do not edit applied migration SQL or rewrite immutable event history
+Current storage uses SQLite schema v6. Do not edit applied migration SQL or rewrite immutable event history
 to implement a new feature. Add a reviewed migration, exact preservation/rollback
 fixtures and explicit supported-version validation. Initialization is a trusted
 local administrative action, never a side effect of reads or MCP connection.
