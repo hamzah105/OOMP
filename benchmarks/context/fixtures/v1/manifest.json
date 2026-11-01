@@ -1,0 +1,17 @@
+{
+  "version": "context-fixture-manifest.v1",
+  "synthetic": true,
+  "prepared_client_date": "2026-11-01",
+  "prepared_before_context_ranking_tuning": true,
+  "baseline_commit": "661e7b5ea8a5048c9da63b1ccd3515e7c9addc6a",
+  "annotation_status": "Developer-authored labels; independent review pending",
+  "owned_source_events": 15,
+  "foreign_control_events": 2,
+  "recall_sessions": 3,
+  "queries": 12,
+  "files": {
+    "three-session.json": "d761e12a246084104a9f7113c28b3ad99853afdff72b0d842417674f476e7ae9",
+    "preregistration.json": "37e2f4c082d8938c07a1364af1edafdef1bd9036663404481401290cd8fe589f"
+  },
+  "source_quality_claim": "Synthetic source retrieval and contract mechanics only; no final chatbot answer quality or real embedding model claim."
+}

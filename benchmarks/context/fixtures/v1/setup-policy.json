@@ -1,0 +1,71 @@
+{
+  "version": "context-setup-policy.v1",
+  "synthetic_only": true,
+  "original_manifest_sha256": "309610350f5dd6d53095e4972dd8174f0bd289d7774cb15a58b34e9a43b9426d",
+  "applies_to_fixture_version": "context-three-session.v1",
+  "setup_order": [
+    "Initialize fresh disposable SQLite schema v6",
+    "Ingest owned pre-correction turns through rules-only real Mind jobs; explicit P3 projection; capture actual recording cutoff",
+    "Ingest owned correction and rename through rules-only real Mind jobs; replay explicit P3 projection",
+    "Ingest fixed foreign tenant and foreign principal controls through their own authorized Mind workers/projections",
+    "Index canonical records with frozen deterministic mock vectors, then perform read-only comparisons on unchanged source data"
+  ],
+  "extraction": {
+    "mode": "rules",
+    "retain_episodes": true,
+    "sensitive_episodes": true,
+    "sensitivity_consent": "Explicit fictional evaluation-only opt-in so political leadership can be retrieved as attributed topic discussion; never production default or personal trait",
+    "exclude_terms": [],
+    "live_provider": null
+  },
+  "projection": {
+    "explicit_build": true,
+    "page_limit": 100,
+    "max_pages": 2,
+    "no_automatic_projection_during_retrieval": true
+  },
+  "mock_vectors": {
+    "space": {
+      "provider": "synthetic",
+      "model": "context-keyword-fixture",
+      "version": "v1",
+      "dimension": 8
+    },
+    "algorithm": "One numeric coordinate per frozen category in preregistration insertion order; each coordinate is number of category terms whose casefolded substring is in the text. If all coordinates are zero, set only the final other coordinate to one. L2 normalize.",
+    "real_semantic_quality_claim": false
+  },
+  "record_policy": {
+    "query_order": "Frozen preregistration order",
+    "method_order": "Frozen preregistration order",
+    "budget_order": [
+      "primary",
+      "constrained"
+    ],
+    "timing_passes_per_query": 1,
+    "latency_scope": "Single measured call per query/method/budget; query-mix p50/p95, not an isolated microbenchmark",
+    "quality_denominator": "Each query counted once per method/budget",
+    "recall_at_k_unique_source_limit": 8,
+    "source_precision": "Distinct returned source events intersecting allowed_source_event_ids divided by distinct returned source events; invalid evidence never receives provenance credit",
+    "gold_annotation_status": "Developer-authored; independent/owner review pending"
+  },
+  "first_run_policy": {
+    "frozen_baseline_commit": "661e7b5ea8a5048c9da63b1ccd3515e7c9addc6a",
+    "no_outputs_observed": true,
+    "keep_all_failures_and_denominators": true,
+    "no_ranking_search": true,
+    "positive_thresholds_apply_to": "context-lexical primary only; other configurations are frozen reported comparisons",
+    "resource_scope": "Benchmark Python client; fixture setup/SQLite and mock index sizes reported separately; no server/model resource claim"
+  },
+  "source_semantics": {
+    "political_topic": "Attributed topic evidence only, never affiliation",
+    "correction": "Review-pending source-backed correction, not independently governed supersession or completed move",
+    "claimed_alias": "Claimed synthetic alias, never authenticated identity"
+  },
+  "network_policy": {
+    "real_model_calls": 0,
+    "provider_network_calls": 0,
+    "trace_calls": 0,
+    "mongo_access": 0
+  },
+  "immutability": "This setup clarification is frozen before first outputs; original fixture, gold, budgets and thresholds remain unchanged."
+}

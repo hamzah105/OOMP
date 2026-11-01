@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from oomp.domain.enums import RelationshipType
-from oomp.domain.graph import EdgeRecord, MemoryState, TemporalQuery
+from oomp.domain.graph import EdgeCursor, EdgePage, EdgeRecord, MemoryState, TemporalQuery
 from oomp.domain.memories import MemoryCursor, MemoryPage
 from oomp.domain.models import AuthorizedScope, MemoryNode
 from oomp.retrieval.contracts import EmbeddingSpace
@@ -21,8 +21,9 @@ from .memory_store import _normalize_name
 from .errors import (
     EmbeddingSpaceError, RetrievalIndexError, RetrievalLimitError,
     ScopeMismatchError, SchemaUpgradeRequiredError, StoredMemoryCorruptionError,
+    GraphLimitError, MemoryNotFoundError,
 )
-from .graph_store import SQLiteGraphStore
+from .graph_store import SQLiteGraphStore, _MAX_RESULT_EVIDENCE
 from .memory_store import SQLiteMemoryStore
 from .migrations import user_version
 from .sqlite import _authorized, _timestamp, _translate_sqlite_errors
@@ -127,16 +128,63 @@ def _validate_limit(limit: int, maximum: int, label: str) -> None:
         raise ValueError(f"{label} must be an integer from 1 to {maximum}")
 
 
+def _event_owner_sql(alias: str, principal_id: str) -> tuple[str, tuple[str, ...]]:
+    """Internal SQL only: missing/malformed ownership is never an owner match."""
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", alias) is None:
+        raise ValueError("invalid internal SQL alias")
+    return (
+        f"""(CASE WHEN json_valid({alias}.metadata_json) THEN
+            CASE WHEN json_type({alias}.metadata_json,'$.ingested_by')='text'
+                       AND json_extract({alias}.metadata_json,'$.ingested_by')=?
+                 THEN 1 ELSE 0 END ELSE 0 END)=1""",
+        (principal_id,),
+    )
+
+
+def _memory_owner_sql(alias: str, principal_id: str) -> tuple[str, tuple[str, ...]]:
+    """Require every original proof to belong to the trusted principal.
+
+    A legacy memory without principal metadata can be attributed by its sources;
+    an absent source principal cannot. Mixed-principal proof sets fail closed.
+    This predicate belongs before corpus/ranking/scan limits, not after results.
+    """
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", alias) is None:
+        raise ValueError("invalid internal SQL alias")
+    event_sql, event_values = _event_owner_sql("principal_event", principal_id)
+    return (
+        f"""(CASE WHEN json_valid({alias}.metadata_json) THEN
+            CASE WHEN json_type({alias}.metadata_json,'$.principal_id') IS NULL THEN 1
+                 WHEN json_type({alias}.metadata_json,'$.principal_id')='text'
+                      AND json_extract({alias}.metadata_json,'$.principal_id')=? THEN 1
+                 ELSE 0 END ELSE 0 END)=1
+        AND EXISTS (SELECT 1 FROM memory_sources principal_source
+            WHERE principal_source.tenant_id={alias}.tenant_id
+              AND principal_source.namespace={alias}.namespace
+              AND principal_source.memory_id={alias}.memory_id)
+        AND NOT EXISTS (SELECT 1 FROM memory_sources principal_link
+            LEFT JOIN events principal_event
+              ON principal_event.tenant_id=principal_link.tenant_id
+             AND principal_event.namespace=principal_link.namespace
+             AND principal_event.event_id=principal_link.event_id
+            WHERE principal_link.tenant_id={alias}.tenant_id
+              AND principal_link.namespace={alias}.namespace
+              AND principal_link.memory_id={alias}.memory_id
+              AND NOT ({event_sql}))""",
+        (principal_id, *event_values),
+    )
+
+
 def _bounded_corpus(
     connection: sqlite3.Connection, scope: AuthorizedScope, *,
-    max_docs: int, max_bytes: int,
+    max_docs: int, max_bytes: int, principal_only: bool = False,
 ) -> tuple[int, int]:
     """Use the scoped primary key and SQL byte lengths; never load text to preflight."""
+    ownership, owner_values = _memory_owner_sql("m", scope.principal_id) if principal_only else ("1", ())
     rows = connection.execute(
-        """SELECT length(CAST(canonical_content AS BLOB)) AS byte_count
-           FROM memories WHERE tenant_id=? AND namespace=?
-           ORDER BY memory_id LIMIT ?""",
-        (scope.tenant_id, scope.namespace, max_docs + 1),
+        f"""SELECT length(CAST(m.canonical_content AS BLOB)) AS byte_count
+           FROM memories m WHERE m.tenant_id=? AND m.namespace=? AND ({ownership})
+           ORDER BY m.memory_id LIMIT ?""",
+        (scope.tenant_id, scope.namespace, *owner_values, max_docs + 1),
     )
     count = size = 0
     for row in rows:
@@ -149,15 +197,204 @@ def _bounded_corpus(
     return count, size
 
 
+class _PrincipalGraphRead:
+    """Reuse original temporal/traversal policy with owner-filtered SQL pages."""
+
+    def __init__(self, session):
+        self.session = session
+
+    def __getattr__(self, name):
+        return getattr(self.session._store, name)
+
+    def _exists_memory(self, connection, scope, memory_id):
+        return self.session.owns_memory(memory_id)
+
+    def _memory_state_in_connection(self, connection, scope, memory_id, query):
+        if not self.session.owns_memory(memory_id):
+            raise MemoryNotFoundError("memory is missing from authorized scope")
+        return SQLiteGraphStore._memory_state_in_connection(
+            self, connection, scope, memory_id, query,
+        )
+
+    def _rows(self, connection, scope, *, source_node_id=None, target_node_id=None,
+              node_id=None, relationships=None, known_at=None, after=None, limit=100):
+        ownership, owner_values = self.session._edge_predicate("g")
+        sql = "SELECT g.* FROM memory_edges g WHERE g.tenant_id=? AND g.namespace=?"
+        values = [scope.tenant_id, scope.namespace]
+        for column, identifier in (("source_node_id", source_node_id), ("target_node_id", target_node_id)):
+            if identifier is not None:
+                sql += f" AND g.{column}=?"
+                values.append(identifier)
+        if node_id is not None:
+            sql += " AND (g.source_node_id=? OR g.target_node_id=?)"
+            values.extend((node_id, node_id))
+        if relationships is not None:
+            if not relationships:
+                return []
+            sql += " AND g.relationship_type IN (" + ",".join("?" for _ in relationships) + ")"
+            values.extend(item.value for item in relationships)
+        if known_at is not None:
+            sql += """ AND g.recorded_at<=? AND EXISTS (SELECT 1 FROM edge_evidence ev
+                WHERE ev.tenant_id=g.tenant_id AND ev.namespace=g.namespace
+                  AND ev.edge_id=g.edge_id AND ev.recorded_at<=?)"""
+            values.extend((_timestamp(known_at), _timestamp(known_at)))
+        if after is not None:
+            sql += " AND (g.recorded_at,g.edge_id)>(?,?)"
+            values.extend((_timestamp(after.recorded_at), after.edge_id))
+        sql += f" AND ({ownership}) ORDER BY g.recorded_at,g.edge_id LIMIT ?"
+        values.extend((*owner_values, limit + 1))
+        return connection.execute(sql, values).fetchall()
+
+    def _records(self, connection, scope, rows, known_at):
+        records = []
+        proofs = 0
+        for row in rows:
+            record = self._read_edge(connection, scope, row, known_at)
+            if record is None:
+                continue
+            proofs += len(record.evidence)
+            if proofs > _MAX_RESULT_EVIDENCE:
+                raise GraphLimitError("graph result evidence budget exceeded")
+            records.append(record)
+        return tuple(records)
+
+    def _list_in_connection(self, connection, scope, *, source_node_id=None,
+                            target_node_id=None, relationship_type=None,
+                            limit=100, after=None, known_at=None):
+        rows = self._rows(connection, scope, source_node_id=source_node_id,
+            target_node_id=target_node_id,
+            relationships=None if relationship_type is None else (relationship_type,),
+            known_at=known_at, after=after, limit=limit)
+        records = self._records(connection, scope, rows[:limit], known_at)
+        cursor = None
+        if len(rows) > limit:
+            row = rows[limit - 1]
+            cursor = EdgeCursor(tenant_id=scope.tenant_id, namespace=scope.namespace,
+                recorded_at=row["recorded_at"], edge_id=row["edge_id"])
+        return EdgePage(edges=records, next_cursor=cursor)
+
+    def _neighbors_in_connection(self, connection, scope, node_id, *, direction,
+                                 allowed_relationships, limit, known_at=None):
+        kwargs = ({"node_id": node_id} if direction == "both" else
+                  {"source_node_id" if direction == "outgoing" else "target_node_id": node_id})
+        rows = self._rows(connection, scope, **kwargs, relationships=allowed_relationships,
+            known_at=known_at, limit=limit)
+        if len(rows) > limit:
+            raise GraphLimitError("graph fanout exceeds the requested complete bound")
+        return self._records(connection, scope, rows, known_at)
+
+
 class RetrievalReadSession:
     """All methods use one authorized SQLite snapshot; no connection escapes the context."""
 
-    def __init__(self, store: SQLiteRetrievalStore, connection: sqlite3.Connection, scope: AuthorizedScope):
+    def __init__(self, store: SQLiteRetrievalStore, connection: sqlite3.Connection,
+                 scope: AuthorizedScope, *, principal_only: bool = False):
+        if type(principal_only) is not bool:
+            raise TypeError("principal_only must be boolean")
         self._store = store
         self._connection = connection
         self.scope = scope
+        self.principal_only = principal_only
+        self._principal_graph = _PrincipalGraphRead(self) if principal_only else None
+        self._ownership_cache: dict[str, bool] = {}
+
+    def _memory_predicate(self, alias="m"):
+        return _memory_owner_sql(alias, self.scope.principal_id) if self.principal_only else ("1", ())
+
+    def owns_event(self, event_id: str) -> bool:
+        predicate, values = _event_owner_sql("e", self.scope.principal_id)
+        return self._connection.execute(
+            f"SELECT 1 FROM events e WHERE e.tenant_id=? AND e.namespace=? AND e.event_id=? AND ({predicate})",
+            (self.scope.tenant_id, self.scope.namespace, event_id, *values),
+        ).fetchone() is not None
+
+    def owns_memory(self, memory_id: str) -> bool:
+        if memory_id not in self._ownership_cache:
+            predicate, values = self._memory_predicate("m")
+            self._ownership_cache[memory_id] = self._connection.execute(
+                f"SELECT 1 FROM memories m WHERE m.tenant_id=? AND m.namespace=? AND m.memory_id=? AND ({predicate})",
+                (self.scope.tenant_id, self.scope.namespace, memory_id, *values),
+            ).fetchone() is not None
+        return self._ownership_cache[memory_id]
+
+    def _edge_predicate(self, alias="g"):
+        if not self.principal_only:
+            return "1", ()
+        source_sql, source_values = self._memory_predicate("edge_source_m")
+        target_sql, target_values = self._memory_predicate("edge_target_m")
+        event_sql, event_values = _event_owner_sql("edge_owner_event", self.scope.principal_id)
+        return (
+            f"""{alias}.recorded_by=?
+            AND EXISTS (SELECT 1 FROM memories edge_source_m
+                WHERE edge_source_m.tenant_id={alias}.tenant_id AND edge_source_m.namespace={alias}.namespace
+                  AND edge_source_m.memory_id={alias}.source_node_id AND ({source_sql}))
+            AND EXISTS (SELECT 1 FROM memories edge_target_m
+                WHERE edge_target_m.tenant_id={alias}.tenant_id AND edge_target_m.namespace={alias}.namespace
+                  AND edge_target_m.memory_id={alias}.target_node_id AND ({target_sql}))
+            AND EXISTS (SELECT 1 FROM edge_evidence edge_owner_link
+                WHERE edge_owner_link.tenant_id={alias}.tenant_id AND edge_owner_link.namespace={alias}.namespace
+                  AND edge_owner_link.edge_id={alias}.edge_id)
+            AND NOT EXISTS (SELECT 1 FROM edge_evidence edge_owner_source
+                LEFT JOIN events edge_owner_event ON edge_owner_event.tenant_id=edge_owner_source.tenant_id
+                  AND edge_owner_event.namespace=edge_owner_source.namespace
+                  AND edge_owner_event.event_id=edge_owner_source.event_id
+                WHERE edge_owner_source.tenant_id={alias}.tenant_id AND edge_owner_source.namespace={alias}.namespace
+                  AND edge_owner_source.edge_id={alias}.edge_id AND NOT ({event_sql}))""",
+            (self.scope.principal_id, *source_values, *target_values, *event_values),
+        )
+
+    def _linked_memory_predicate(self, alias):
+        if not self.principal_only:
+            return "1", ()
+        predicate, values = self._memory_predicate("linked_owner_memory")
+        return (
+            f"""EXISTS (SELECT 1 FROM memories linked_owner_memory
+                WHERE linked_owner_memory.tenant_id={alias}.tenant_id
+                  AND linked_owner_memory.namespace={alias}.namespace
+                  AND linked_owner_memory.memory_id={alias}.memory_id
+                  AND ({predicate}))""",
+            values,
+        )
+
+    def index_status(self, space: EmbeddingSpace | None = None) -> IndexStatus:
+        """Coverage in this same snapshot, with the same principal admission."""
+        c = self._connection
+        total, _ = _bounded_corpus(c, self.scope,
+            max_docs=self._store.max_lexical_docs, max_bytes=self._store.max_lexical_bytes,
+            principal_only=self.principal_only)
+        predicate, values = self._memory_predicate("m")
+        rows = c.execute(f"""SELECT m.memory_id,m.canonical_content,d.doc_id,
+                    f.canonical_content AS indexed_content
+            FROM memories m LEFT JOIN memory_fts_docs d
+              ON d.tenant_id=m.tenant_id AND d.namespace=m.namespace AND d.memory_id=m.memory_id
+            LEFT JOIN memory_fts f ON f.rowid=d.doc_id
+            WHERE m.tenant_id=? AND m.namespace=? AND ({predicate})""",
+            (self.scope.tenant_id, self.scope.namespace, *values)).fetchall()
+        lexical = sum(row["doc_id"] is not None and row["indexed_content"] is not None for row in rows)
+        lexical_stale = sum(row["doc_id"] is None or row["indexed_content"] != row["canonical_content"] for row in rows)
+        embedded = stale = 0
+        if space is not None:
+            provider, model, version = _space_values(space)
+            vectors = c.execute(f"""SELECT m.canonical_content,e.content_digest,e.dimension
+                FROM memories m JOIN memory_embeddings e
+                  ON e.tenant_id=m.tenant_id AND e.namespace=m.namespace AND e.memory_id=m.memory_id
+                WHERE m.tenant_id=? AND m.namespace=? AND e.provider=? AND e.model=?
+                  AND e.config_version=? AND ({predicate})""",
+                (self.scope.tenant_id, self.scope.namespace, provider, model, version, *values))
+            for row in vectors:
+                if row["dimension"] != space.dimension:
+                    raise RetrievalIndexError("stored embedding dimension is inconsistent")
+                if row["content_digest"] == content_digest(row["canonical_content"]):
+                    embedded += 1
+                else:
+                    stale += 1
+        return IndexStatus(total, lexical, embedded, stale, self._store.max_lexical_docs,
+            self._store.max_lexical_bytes, self._store.max_vector_scan, lexical_stale)
 
     def _currently_endorsed(self, memory_id: str) -> bool:
+        if self.principal_only:
+            state = self.memory_state(memory_id, TemporalQuery())
+            return state.known is True and bool(state.evidence)
         from .migrations import user_version
         if user_version(self._connection) < 5:
             return True
@@ -177,18 +414,20 @@ class RetrievalReadSession:
         count, _ = _bounded_corpus(
             c, self.scope, max_docs=self._store.max_lexical_docs,
             max_bytes=self._store.max_lexical_bytes,
+            principal_only=self.principal_only,
         )
+        predicate, values = self._memory_predicate("m")
         rows = c.execute(
-            """SELECT m.memory_id, m.canonical_content, d.doc_id,
+            f"""SELECT m.memory_id, m.canonical_content, d.doc_id,
                       f.canonical_content AS indexed_content
                FROM memories m
                LEFT JOIN memory_fts_docs d
                  ON d.tenant_id=m.tenant_id AND d.namespace=m.namespace
                 AND d.memory_id=m.memory_id
                LEFT JOIN memory_fts f ON f.rowid=d.doc_id
-               WHERE m.tenant_id=? AND m.namespace=?
+               WHERE m.tenant_id=? AND m.namespace=? AND ({predicate})
                ORDER BY m.memory_id""",
-            (self.scope.tenant_id, self.scope.namespace),
+            (self.scope.tenant_id, self.scope.namespace, *values),
         )
         result: list[tuple[str, str]] = []
         seen = 0
@@ -201,9 +440,7 @@ class RetrievalReadSession:
                 if not self._currently_endorsed(row["memory_id"]):
                     continue
             else:
-                state = self._store._memory_state_in_connection(
-                    c, self.scope, row["memory_id"], query,
-                )
+                state = self.memory_state(row["memory_id"], query)
                 if state.known is not True or not state.evidence:
                     continue
             result.append((row["memory_id"], row["canonical_content"]))
@@ -229,12 +466,13 @@ class RetrievalReadSession:
             return ()
         # The durable FTS5 inverted index generates matches. Scoped BM25 below
         # uses all authorized documents so other tenants cannot alter IDF/rank.
+        ownership, owner_values = self._linked_memory_predicate("d")
         durable = self._connection.execute(
-            """SELECT d.memory_id FROM memory_fts
+            f"""SELECT d.memory_id FROM memory_fts
                JOIN memory_fts_docs d ON d.doc_id=memory_fts.rowid
-               WHERE memory_fts MATCH ? AND d.tenant_id=? AND d.namespace=?
+               WHERE memory_fts MATCH ? AND d.tenant_id=? AND d.namespace=? AND ({ownership})
                ORDER BY d.memory_id LIMIT ?""",
-            (expression, self.scope.tenant_id, self.scope.namespace, self._store.max_lexical_docs + 1),
+            (expression, self.scope.tenant_id, self.scope.namespace, *owner_values, self._store.max_lexical_docs + 1),
         ).fetchall()
         if len(durable) > self._store.max_lexical_docs:
             raise RetrievalLimitError("durable lexical match set exceeds scope limit")
@@ -270,6 +508,7 @@ class RetrievalReadSession:
         total, _ = _bounded_corpus(
             c, self.scope, max_docs=min(scan_limit, self._store.max_vector_scan),
             max_bytes=self._store.max_lexical_bytes,
+            principal_only=self.principal_only,
         )
         if total == 0:
             return ()
@@ -282,14 +521,15 @@ class RetrievalReadSession:
             raise EmbeddingSpaceError("embedding space is not indexed in authorized scope")
         if compatible[0] != space.dimension:
             raise EmbeddingSpaceError("embedding dimension conflicts with stored model space")
+        ownership, owner_values = self._memory_predicate("m")
         rows = c.execute(
-            """SELECT m.memory_id,m.canonical_content,e.dimension,e.vector_blob,e.content_digest
+            f"""SELECT m.memory_id,m.canonical_content,e.dimension,e.vector_blob,e.content_digest
                FROM memories m LEFT JOIN memory_embeddings e
                  ON e.tenant_id=m.tenant_id AND e.namespace=m.namespace
                 AND e.memory_id=m.memory_id AND e.provider=? AND e.model=?
                 AND e.config_version=?
-               WHERE m.tenant_id=? AND m.namespace=? ORDER BY m.memory_id""",
-            (provider, model, version, self.scope.tenant_id, self.scope.namespace),
+               WHERE m.tenant_id=? AND m.namespace=? AND ({ownership}) ORDER BY m.memory_id""",
+            (provider, model, version, self.scope.tenant_id, self.scope.namespace, *owner_values),
         )
         scored: list[tuple[str, float]] = []
         temporal = TemporalQuery(known_at=known_at)
@@ -300,9 +540,7 @@ class RetrievalReadSession:
                 if not self._currently_endorsed(row["memory_id"]):
                     continue
             else:
-                state = self._store._memory_state_in_connection(
-                    c, self.scope, row["memory_id"], temporal,
-                )
+                state = self.memory_state(row["memory_id"], temporal)
                 if state.known is not True or not state.evidence:
                     continue
             if row["vector_blob"] is None:
@@ -334,13 +572,20 @@ class RetrievalReadSession:
             return ()
         c = self._connection
         found: dict[tuple[str, str], EntityHit] = {}
+        ownership, owner_values = self._linked_memory_predicate("me")
+        alias_owner, alias_values = (_event_owner_sql("alias_owner_event", self.scope.principal_id)
+            if self.principal_only else ("1", ()))
+        alias_predicate = (f"""EXISTS (SELECT 1 FROM events alias_owner_event
+            WHERE alias_owner_event.tenant_id=a.tenant_id AND alias_owner_event.namespace=a.namespace
+              AND alias_owner_event.event_id=a.source_event_id AND ({alias_owner}))"""
+            if self.principal_only else "1")
         for name in normalized:
             rows = c.execute(
-                """SELECT me.memory_id, e.entity_id, e.canonical_name FROM entities e
+                f"""SELECT me.memory_id, e.entity_id, e.canonical_name FROM entities e
                    JOIN memory_entities me
                      ON me.tenant_id=e.tenant_id AND me.namespace=e.namespace
                     AND me.entity_id=e.entity_id
-                   WHERE e.tenant_id=? AND e.namespace=? AND e.normalized_name=?
+                   WHERE e.tenant_id=? AND e.namespace=? AND e.normalized_name=? AND ({ownership})
                    UNION
                    SELECT me.memory_id, e.entity_id, a.alias_name FROM entity_aliases a
                    JOIN entities e
@@ -350,16 +595,15 @@ class RetrievalReadSession:
                      ON me.tenant_id=e.tenant_id AND me.namespace=e.namespace
                     AND me.entity_id=e.entity_id
                    WHERE a.tenant_id=? AND a.namespace=? AND a.normalized_alias=?
+                     AND ({ownership}) AND ({alias_predicate})
                    ORDER BY 1, 2 LIMIT ?""",
-                (self.scope.tenant_id, self.scope.namespace, name,
-                 self.scope.tenant_id, self.scope.namespace, name, limit+1),
+                (self.scope.tenant_id, self.scope.namespace, name, *owner_values,
+                 self.scope.tenant_id, self.scope.namespace, name, *owner_values, *alias_values, limit+1),
             ).fetchall()
             if len(rows) > limit:
                 raise RetrievalLimitError("entity lookup exceeds complete result limit")
             for row in rows:
-                state = self._store._memory_state_in_connection(
-                    c, self.scope, row[0], TemporalQuery(),
-                )
+                state = self.memory_state(row[0], TemporalQuery())
                 if state.known is not True or not state.evidence:
                     continue
                 hit = EntityHit(row[0], row[1], row[2])
@@ -378,11 +622,22 @@ class RetrievalReadSession:
         if not normalized:
             return ()
         c = self._connection
-        topics = c.execute(
-            """SELECT topic_id,name,recorded_at FROM topics
-               WHERE tenant_id=? AND namespace=? ORDER BY topic_id LIMIT 501""",
-            (self.scope.tenant_id, self.scope.namespace),
-        ).fetchall()
+        topic_sql = "SELECT t.topic_id,t.name,t.recorded_at FROM topics t WHERE t.tenant_id=? AND t.namespace=?"
+        topic_values = [self.scope.tenant_id, self.scope.namespace]
+        if self.principal_only:
+            ownership, owner_values = self._linked_memory_predicate("principal_membership")
+            topic_sql += f""" AND EXISTS (SELECT 1 FROM topic_memberships principal_membership
+                WHERE principal_membership.tenant_id=t.tenant_id AND principal_membership.namespace=t.namespace
+                  AND principal_membership.topic_id=t.topic_id AND ({ownership})"""
+            topic_values.extend(owner_values)
+            if known_at is not None:
+                topic_sql += " AND principal_membership.recorded_at<=?"
+                topic_values.append(_timestamp(known_at))
+            topic_sql += ")"
+            if known_at is not None:
+                topic_sql += " AND t.recorded_at<=?"
+                topic_values.append(_timestamp(known_at))
+        topics = c.execute(topic_sql + " ORDER BY t.topic_id LIMIT 501", topic_values).fetchall()
         if len(topics) > 500:
             raise RetrievalLimitError("scoped topic catalog exceeds lookup limit")
         found: dict[tuple[str, str], TopicHit] = {}
@@ -392,21 +647,21 @@ class RetrievalReadSession:
                 continue
             if known_at is not None and topic["recorded_at"] > _timestamp(known_at):
                 continue
-            sql = """SELECT memory_id FROM topic_memberships
-                     WHERE tenant_id=? AND namespace=? AND topic_id=?"""
+            ownership, owner_values = self._linked_memory_predicate("tm")
+            sql = f"""SELECT tm.memory_id FROM topic_memberships tm
+                     WHERE tm.tenant_id=? AND tm.namespace=? AND tm.topic_id=? AND ({ownership})"""
             values: list[object] = [self.scope.tenant_id, self.scope.namespace, topic["topic_id"]]
+            values.extend(owner_values)
             if known_at is not None:
-                sql += " AND recorded_at<=?"
+                sql += " AND tm.recorded_at<=?"
                 values.append(_timestamp(known_at))
-            sql += " ORDER BY memory_id LIMIT ?"
+            sql += " ORDER BY tm.memory_id LIMIT ?"
             values.append(limit+1)
             rows = c.execute(sql, values).fetchall()
             if len(rows) > limit:
                 raise RetrievalLimitError("topic lookup exceeds complete result limit")
             for row in rows:
-                state = self._store._memory_state_in_connection(
-                    c, self.scope, row["memory_id"], temporal,
-                )
+                state = self.memory_state(row["memory_id"], temporal)
                 if state.known is not True or not state.evidence:
                     continue
                 hit = TopicHit(row["memory_id"],topic["topic_id"],topic["name"])
@@ -428,6 +683,13 @@ class RetrievalReadSession:
         from pydantic import TypeAdapter
         identifier = TypeAdapter(Identifier).validate_python(memory_id)
         temporal = TemporalQuery.model_validate(query.model_dump(mode="json"))
+        if self.principal_only:
+            return SQLiteGraphStore._traverse_in_connection(
+                self._principal_graph, self._connection, self.scope, identifier,
+                max_depth=max_depth, max_nodes=max_nodes,
+                allowed_relationships=tuple(RelationshipType(r) for r in allowed_relationships),
+                query=temporal, max_edges=64, max_work=400, max_proof=1000,
+            )
         return self._store._traverse_in_connection(
             self._connection, self.scope, identifier,
             max_depth=max_depth, max_nodes=max_nodes,
@@ -436,6 +698,8 @@ class RetrievalReadSession:
         )
 
     def memory(self, memory_id: str) -> MemoryNode | None:
+        if self.principal_only and not self.owns_memory(memory_id):
+            return None
         row = self._connection.execute(
             "SELECT * FROM memories WHERE tenant_id=? AND namespace=? AND memory_id=?",
             (self.scope.tenant_id, self.scope.namespace, memory_id),
@@ -443,6 +707,10 @@ class RetrievalReadSession:
         return None if row is None else self._store._read_memory(self._connection, self.scope, row)
 
     def memory_state(self, memory_id: str, query: TemporalQuery) -> MemoryState:
+        if self.principal_only:
+            return self._principal_graph._memory_state_in_connection(
+                self._connection, self.scope, memory_id, query,
+            )
         return self._store._memory_state_in_connection(
             self._connection, self.scope, memory_id, query,
         )
@@ -453,7 +721,10 @@ class RetrievalReadSession:
     ) -> tuple[EdgeRecord, ...]:
         _validate_limit(limit, 1000, "neighbor limit")
         from .graph_store import _edge_endorsed
-        records = self._store._neighbors_in_connection(
+        if self.principal_only and not self.owns_memory(node_id):
+            return ()
+        reader = self._principal_graph if self.principal_only else self._store
+        records = reader._neighbors_in_connection(
             self._connection, self.scope, node_id, direction="both",
             allowed_relationships=allowed_relationships, limit=limit, known_at=known_at,
         )
@@ -487,11 +758,13 @@ class SQLiteRetrievalStore(SQLiteGraphStore):
             raise SchemaUpgradeRequiredError("retrieval storage requires explicit schema version 4 initialization")
 
     @contextmanager
-    def read_snapshot(self, scope: AuthorizedScope) -> Iterator[RetrievalReadSession]:
+    def read_snapshot(self, scope: AuthorizedScope, *, principal_only: bool = False) -> Iterator[RetrievalReadSession]:
+        if type(principal_only) is not bool:
+            raise TypeError("principal_only must be boolean")
         authorized = _authorized(scope)
         with self._graph_read() as connection:
             self._require_v4(connection)
-            yield RetrievalReadSession(self, connection, authorized)
+            yield RetrievalReadSession(self, connection, authorized, principal_only=principal_only)
 
     @_translate_sqlite_errors
     def embedding_index_plan(

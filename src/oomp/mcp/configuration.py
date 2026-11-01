@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, StrictInt, field_validator, model_validator
+from pydantic import Field, StrictBool, StrictInt, field_validator, model_validator
 from oomp.domain.models import ContractModel, Identifier, UtcDateTime
 from oomp.domain.enums import EventType, SourceType
 
@@ -96,6 +96,7 @@ class ServerConfiguration(ContractModel):
     max_result_bytes: StrictInt = Field(default=262144, ge=4096, le=1048576)
     max_concurrent_calls: StrictInt = Field(default=4, ge=1, le=16)
     embedding: EmbeddingConfiguration | None = None
+    context_enabled: StrictBool = False
 
     @field_validator("database")
     @classmethod

@@ -21,6 +21,7 @@ from .contracts import (
     RetrieveArguments, RetrieveResult, ExpandArguments, ExpandResult, ExpandedEdge,
     SourceArguments, SourceResult, SourceEvidence, StatusArguments, StatusResult,
     IndexInformation, QueueInformation, EmbeddingIdentity, IngestArguments, IngestResult,
+    ContextArguments, ContextResult,
 )
 from .errors import BoundaryError
 
@@ -36,6 +37,23 @@ class MemoryService:
         self.projection = SQLiteRetrievalStore(config.database)
         self.events = SQLiteEventStore(config.database)
         self.mind = SQLiteMindStore(config.database)
+
+    def context(self, grant: Grant, arguments: ContextArguments) -> ContextResult:
+        if not self.config.context_enabled:
+            raise BoundaryError("not_found")
+        if "read" not in grant.capabilities:
+            raise BoundaryError("forbidden")
+        if arguments.include_source_content and "read_source" not in grant.capabilities:
+            raise BoundaryError("forbidden")
+        # Keep core/default MCP startup independent of the opt-in orchestrator.
+        from oomp.context.contracts import ContextRequest
+        from oomp.context.engine import ContextEngine
+        scope = self.resolver.scope(grant)
+        request = ContextRequest(
+            tenant_id=scope.tenant_id, namespace=scope.namespace,
+            **arguments.model_dump(mode="python"),
+        )
+        return ContextEngine(self.config.database, provider=self.retrieval.provider).retrieve(scope, request)
 
     def retrieve(self, grant: Grant, arguments: RetrieveArguments) -> RetrieveResult:
         scope = self.resolver.scope(grant)

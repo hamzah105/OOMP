@@ -8,6 +8,11 @@ from pydantic import Field, StrictBool, StrictInt, create_model, field_validator
 from oomp.domain.enums import EventType, RelationshipType
 from oomp.domain.models import ContractModel, Identifier, SourceReference, UtcDateTime, _nonblank
 from oomp.retrieval.contracts import RetrievalRequest, RetrievalResponse, MemoryEvidence
+from oomp.context.contracts import ContextArgumentsFields, ContextResponse
+
+# A separate opt-in contract: never add P4 fields to the legacy retrieve model.
+ContextArguments = ContextArgumentsFields
+ContextResult = ContextResponse
 
 
 class _RetrieveBase(ContractModel):
