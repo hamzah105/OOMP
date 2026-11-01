@@ -13,3 +13,11 @@ create typed user attributes. Existing P2 may retain attributed episode evidence
 Run `python examples/object_memory_quickstart.py --directory <fresh-short-path>`.
 The example uses actual rules-only Mind jobs and explicit disposable SQLite paths.
 It refuses an existing directory. No provider, TRACE or external service is used.
+
+`context_recall_v1.json` is the separate frozen public P4A three-session fixture,
+copied byte-for-byte from `benchmarks/context/fixtures/v1/three-session.json`.
+SHA-256: `d761e12a246084104a9f7113c28b3ad99853afdff72b0d842417674f476e7ae9`.
+The P4A quickstart explicitly consents to fictional attributed political-topic
+episodes only; it does not infer a belief, affiliation or authenticated identity.
+Run `python examples/context_recall_quickstart.py --directory <fresh-short-path>`.
+No model, embedding server, TRACE application or private profile is involved.

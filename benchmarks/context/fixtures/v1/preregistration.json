@@ -1,0 +1,473 @@
+{
+  "version": "context-preregistration.v1",
+  "baseline_commit": "661e7b5ea8a5048c9da63b1ccd3515e7c9addc6a",
+  "status": "Frozen before context ranking implementation; no measured results",
+  "synthetic": true,
+  "queries": [
+    {
+      "id": "project",
+      "query": "What project did I mention earlier?",
+      "expected_intent_category": "factual_recall",
+      "required_source_event_ids": [
+        "p4a-project"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-project",
+        "p4a-rename"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-correction"
+      ],
+      "abstain": false
+    },
+    {
+      "id": "moving",
+      "query": "What were we discussing about moving?",
+      "expected_intent_category": "episodic_recall",
+      "required_source_event_ids": [
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-correction"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-correction",
+        "p4a-city"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-rename"
+      ],
+      "abstain": false
+    },
+    {
+      "id": "decision",
+      "query": "Did I decide to relocate?",
+      "expected_intent_category": "decision_follow_up",
+      "required_source_event_ids": [
+        "p4a-correction"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-correction",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-rename"
+      ],
+      "abstain": false
+    },
+    {
+      "id": "style",
+      "query": "What response style do I prefer?",
+      "expected_intent_category": "factual_recall",
+      "required_source_event_ids": [
+        "p4a-style"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-style"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-correction",
+        "p4a-rename"
+      ],
+      "abstain": false
+    },
+    {
+      "id": "earlier-name",
+      "query": "What was my earlier project name?",
+      "expected_intent_category": "historical_recall",
+      "required_source_event_ids": [
+        "p4a-project"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-project",
+        "p4a-rename"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-correction"
+      ],
+      "abstain": false
+    },
+    {
+      "id": "pet",
+      "query": "What is my pet's name?",
+      "expected_intent_category": "missing_information",
+      "required_source_event_ids": [],
+      "allowed_source_event_ids": [],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-correction",
+        "p4a-rename"
+      ],
+      "abstain": true
+    },
+    {
+      "id": "alias",
+      "query": "What alias did I introduce?",
+      "expected_intent_category": "entity_lookup",
+      "required_source_event_ids": [
+        "p4a-alias"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-alias"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-city",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-correction",
+        "p4a-rename"
+      ],
+      "abstain": false
+    },
+    {
+      "id": "political-topic",
+      "query": "What political topic did we discuss?",
+      "expected_intent_category": "episodic_recall",
+      "required_source_event_ids": [
+        "p4a-politics"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-politics"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-correction",
+        "p4a-rename"
+      ],
+      "abstain": false
+    },
+    {
+      "id": "before-correction",
+      "query": "Before my correction, what was my plan about moving?",
+      "expected_intent_category": "historical_recall",
+      "required_source_event_ids": [
+        "p4a-plan"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-plan",
+        "p4a-city",
+        "p4a-candidates",
+        "p4a-criterion"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-correction",
+        "p4a-rename"
+      ],
+      "abstain": false,
+      "historical": true,
+      "known_at_marker": "before-correction"
+    },
+    {
+      "id": "current-only",
+      "query": "In this session only, what did I just ask?",
+      "expected_intent_category": "current_session_only",
+      "required_source_event_ids": [],
+      "allowed_source_event_ids": [],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-correction",
+        "p4a-rename"
+      ],
+      "abstain": true
+    },
+    {
+      "id": "vague",
+      "query": "What did we decide?",
+      "expected_intent_category": "uncertain_recall",
+      "required_source_event_ids": [],
+      "allowed_source_event_ids": [],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-correction",
+        "p4a-rename"
+      ],
+      "abstain": true
+    },
+    {
+      "id": "referent",
+      "query": "What did we decide about that?",
+      "expected_intent_category": "decision_follow_up",
+      "required_source_event_ids": [
+        "p4a-correction"
+      ],
+      "allowed_source_event_ids": [
+        "p4a-correction",
+        "p4a-plan",
+        "p4a-candidates",
+        "p4a-criterion"
+      ],
+      "irrelevant_source_event_ids": [
+        "p4a-project",
+        "p4a-style",
+        "p4a-robot",
+        "p4a-alias",
+        "p4a-city",
+        "p4a-focus",
+        "p4a-assistant",
+        "p4a-hypothetical",
+        "p4a-quoted",
+        "p4a-politics",
+        "p4a-rename"
+      ],
+      "abstain": false,
+      "recent_referents": [
+        "I'm considering moving from Karachi to Islamabad."
+      ]
+    }
+  ],
+  "budgets": {
+    "primary": 6000,
+    "constrained": 1200,
+    "tiny_exclusion": 1
+  },
+  "limits": {
+    "max_results": 8,
+    "candidate_limit": 40,
+    "graph_depth": 0,
+    "graph_nodes": 16,
+    "graph_edges": 40,
+    "graph_work": 200
+  },
+  "methods": [
+    "legacy-lexical",
+    "legacy-hybrid-mock",
+    "context-lexical",
+    "context-hybrid-mock",
+    "context-graph1"
+  ],
+  "ranking": {
+    "existing_rrf_k": 60,
+    "existing_lane_weights": {
+      "lexical": 1,
+      "semantic": 1,
+      "entity": 1.5,
+      "topic": 1
+    },
+    "graph_default": 0,
+    "graph_ablation": 1,
+    "context_policy": "Frozen deterministic implementation, no parameter search on measured outputs"
+  },
+  "mock_embedding": {
+    "version": "context-keyword-mock.v1",
+    "dimension": 8,
+    "categories": {
+      "relocation": [
+        "mov",
+        "relocat",
+        "cities",
+        "city",
+        "karachi",
+        "lahore",
+        "islamabad",
+        "infrastructure"
+      ],
+      "project": [
+        "project",
+        "orbit42",
+        "aspen"
+      ],
+      "preference": [
+        "prefer",
+        "response",
+        "style",
+        "concise",
+        "technical"
+      ],
+      "alias": [
+        "alias",
+        "name",
+        "maple",
+        "finch"
+      ],
+      "politics": [
+        "politic",
+        "leadership",
+        "allegiance"
+      ],
+      "robot": [
+        "robot",
+        "tabletop",
+        "build"
+      ],
+      "pet": [
+        "pet",
+        "nimbus",
+        "copper"
+      ],
+      "other": []
+    },
+    "quality_claim": "Synthetic mechanics only; not a real semantic embedding evaluation"
+  },
+  "baseline_policy": {
+    "same_persisted_source_data": true,
+    "same_queries_and_budgets": true,
+    "graph_depth": 0,
+    "allow_degraded": false,
+    "live_provider_calls": 0,
+    "principal_note": "Legacy canonical retrieval is namespace-scoped; report foreign-principal control leakage separately, not as an undocumented v1 contract change."
+  },
+  "thresholds": {
+    "context_primary_required_six_source_recall_min": 0.8,
+    "context_primary_evidence_precision_min": 0.8,
+    "context_abstention_accuracy_min": 1,
+    "context_cross_scope_violations_max": 0,
+    "context_provenance_fidelity_min": 1,
+    "context_budget_overflows_max": 0,
+    "context_duplicate_source_proofs_max": 0,
+    "constrained_budget_quality_gate": "Report only; no minimum recall imposed when complete proof cannot fit",
+    "actual_improvement_claim": "Only when paired frozen measurements demonstrate it; otherwise report equality/regression",
+    "answer_correctness": "Not measured; belongs to TRACE Phase B"
+  },
+  "primary_required_query_ids": [
+    "project",
+    "moving",
+    "decision",
+    "style",
+    "earlier-name",
+    "pet"
+  ],
+  "metrics": [
+    "source_recall_at_k",
+    "source_recall_at_budget",
+    "evidence_precision",
+    "episode_recall",
+    "temporal_correction_accuracy",
+    "false_positive_retrieval",
+    "abstention_correctness",
+    "cross_scope_violation_rate",
+    "provenance_fidelity",
+    "context_bytes",
+    "counting_method",
+    "latency_p50_p95",
+    "cpu_seconds",
+    "peak_client_working_set",
+    "sqlite_growth_bytes"
+  ],
+  "known_at_policy": "Capture actual UTC recording cutoff after pre-correction Mind jobs and projection commit, before ingesting correction; never use source occurrence time as recording time.",
+  "immutability": "Any changed input, annotation, threshold, budget or ranking configuration requires a separately versioned preregistration; preserve v1 and all failed runs."
+}

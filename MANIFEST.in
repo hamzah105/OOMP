@@ -6,7 +6,7 @@ recursive-include src/oomp *.py
 recursive-include examples *.py
 recursive-include examples/fixtures *.json *.md
 recursive-include scripts *.py
-recursive-include benchmarks *.py *.json *.md
+recursive-include benchmarks *.py *.json *.md *.sha256
 recursive-include docs *.md *.json
 recursive-include tests *.py
 recursive-include .github *.yml *.yaml *.md

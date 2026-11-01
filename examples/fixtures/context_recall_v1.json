@@ -1,0 +1,136 @@
+{
+  "version": "context-three-session.v1",
+  "synthetic": true,
+  "annotation_status": "Developer-authored preregistered labels; owner/independent review pending",
+  "scope": {
+    "tenant_id": "context-public-demo",
+    "namespace": "synthetic",
+    "principal_id": "fictional-owner"
+  },
+  "source_system": "public-synthetic-p4a",
+  "base_time": "2026-01-01T12:00:00+00:00",
+  "turns": [
+    {
+      "id": "p4a-project",
+      "session": 0,
+      "role": "user",
+      "text": "I am developing a project called ORBIT42."
+    },
+    {
+      "id": "p4a-style",
+      "session": 1,
+      "role": "user",
+      "text": "I prefer concise technical explanations."
+    },
+    {
+      "id": "p4a-robot",
+      "session": 1,
+      "role": "user",
+      "text": "I plan to build a tabletop robot."
+    },
+    {
+      "id": "p4a-alias",
+      "session": 1,
+      "role": "user",
+      "text": "My test alias is Maple Finch."
+    },
+    {
+      "id": "p4a-city",
+      "session": 1,
+      "role": "user",
+      "text": "My current city is Karachi."
+    },
+    {
+      "id": "p4a-plan",
+      "session": 1,
+      "role": "user",
+      "text": "I'm considering moving from Karachi to Islamabad."
+    },
+    {
+      "id": "p4a-candidates",
+      "session": 1,
+      "role": "user",
+      "text": "Lahore and Islamabad are candidates."
+    },
+    {
+      "id": "p4a-criterion",
+      "session": 1,
+      "role": "user",
+      "text": "Infrastructure is my relocation criterion."
+    },
+    {
+      "id": "p4a-focus",
+      "session": 1,
+      "role": "user",
+      "text": "Forget about ORBIT42 for now."
+    },
+    {
+      "id": "p4a-assistant",
+      "session": 1,
+      "role": "assistant",
+      "text": "You have already moved to Islamabad."
+    },
+    {
+      "id": "p4a-hypothetical",
+      "session": 1,
+      "role": "user",
+      "text": "Suppose I moved to Lahore next year."
+    },
+    {
+      "id": "p4a-quoted",
+      "session": 1,
+      "role": "user",
+      "text": "My friend said, \"I am moving to Lahore.\""
+    },
+    {
+      "id": "p4a-politics",
+      "session": 1,
+      "role": "user",
+      "text": "I am discussing political leadership without stating an allegiance."
+    },
+    {
+      "id": "p4a-correction",
+      "session": 1,
+      "role": "user",
+      "text": "I've decided not to move this year."
+    },
+    {
+      "id": "p4a-rename",
+      "session": 1,
+      "role": "user",
+      "text": "My project ORBIT42 is now called Aspen."
+    }
+  ],
+  "foreign_turns": [
+    {
+      "id": "p4a-foreign-tenant-pet",
+      "partition": "other-tenant",
+      "session": 0,
+      "role": "user",
+      "text": "My pet's name is Nimbus."
+    },
+    {
+      "id": "p4a-foreign-principal-pet",
+      "partition": "other-principal",
+      "session": 0,
+      "role": "user",
+      "text": "My pet's name is Copper."
+    }
+  ],
+  "sessions": {
+    "0": "Initial project",
+    "1": "Preferences, alias, prospective discussion and correction",
+    "2": "Recall questions, not inserted into source storage"
+  },
+  "negative_control_event_ids": [
+    "p4a-assistant",
+    "p4a-hypothetical",
+    "p4a-quoted"
+  ],
+  "forbidden_profile_inferences": [
+    "political affiliation",
+    "nationality",
+    "authenticated legal identity",
+    "completed relocation"
+  ]
+}

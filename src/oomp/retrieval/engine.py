@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from os import PathLike
@@ -193,14 +194,13 @@ class RetrievalEngine:
     def retrieve(
         self, scope: AuthorizedScope, request: RetrievalRequest,
     ) -> RetrievalResponse:
-        incoming = _scoped_request(scope, request)
-        authorized = AuthorizedScope.model_validate(scope.model_dump(mode="json"))
+        return self._retrieve(scope, request)
+
+    def _prepare_embedding(self, incoming: RetrievalRequest):
+        """Prepare the existing optional provider lane before opening a snapshot."""
         mode = incoming.mode
         warnings: list[str] = []
         degraded = False
-        query_terms = _terms(incoming.query)
-        if incoming.known_at is not None:
-            warnings.append("historical_entity_index_unavailable")
         vector = None
         space = None
         if mode in {RetrievalMode.SEMANTIC, RetrievalMode.HYBRID}:
@@ -222,6 +222,31 @@ class RetrievalEngine:
                     degraded = True
                     warnings.append("semantic_query_failed")
                     vector = None
+        return vector, space, tuple(warnings), degraded
+
+    def _retrieve(
+        self, scope: AuthorizedScope, request: RetrievalRequest, *,
+        _session=None, _embedding_state=None, _extra_lanes=None,
+        _candidate_sink: list[MemoryEvidence] | None = None,
+    ) -> RetrievalResponse:
+        """Internal reuse seam; public retrieval and its wire shape stay unchanged.
+
+        Context retrieval supplies one principal-filtered read session and one
+        precomputed embedding. Extra IDs enter the existing entity/topic lanes;
+        fusion, governance, path validation and ranking remain the same engine.
+        """
+        incoming = _scoped_request(scope, request)
+        authorized = AuthorizedScope.model_validate(scope.model_dump(mode="json"))
+        mode = incoming.mode
+        warnings: list[str] = []
+        degraded = False
+        query_terms = _terms(incoming.query)
+        if incoming.known_at is not None:
+            warnings.append("historical_entity_index_unavailable")
+        vector, space, embedding_warnings, degraded = (
+            self._prepare_embedding(incoming) if _embedding_state is None else _embedding_state
+        )
+        warnings.extend(embedding_warnings)
         lanes: dict[str, tuple[str, ...]] = {}
         attribution: dict[str, list[str]] = {}
         trace_counts = {"lexical_candidates": 0, "semantic_candidates": 0,
@@ -232,7 +257,9 @@ class RetrievalEngine:
         temporal = TemporalQuery(known_at=incoming.known_at, valid_at=effective_valid_at)
         paths: dict[str, list[GraphPath]] = {}
         graph_count = 0
-        with self.store.read_snapshot(authorized) as session:
+        if _session is not None and _session.scope != authorized:
+            raise ScopeMismatchError("provided retrieval snapshot differs from authorized scope")
+        with (self.store.read_snapshot(authorized) if _session is None else nullcontext(_session)) as session:
             if mode is not RetrievalMode.SEMANTIC:
                 lexical = session.lexical(
                     incoming.query, limit=incoming.candidate_limit, known_at=incoming.known_at,
@@ -275,6 +302,12 @@ class RetrievalEngine:
                     attribution.setdefault(hit.memory_id, []).append("entity:" + hit.entity_id)
                 for hit in topic:
                     attribution.setdefault(hit.memory_id, []).append("topic:" + hit.topic_id)
+            for lane, identifiers in (_extra_lanes or {}).items():
+                if lane not in {"entity", "topic"} or len(identifiers) > incoming.candidate_limit:
+                    raise RetrievalLimitError("unsupported or excessive internal candidate lane")
+                supplied = tuple(identifier for identifier in identifiers if session.memory(identifier) is not None)
+                lanes[lane] = tuple(dict.fromkeys((*supplied, *lanes.get(lane, ()))))[:incoming.candidate_limit]
+                trace_counts[lane + "_candidates"] = len(lanes[lane])
             fused = fuse_ranked(lanes)
             scored: dict[str, float] = {item.memory_id: item.score for item in fused}
             reasons: dict[str, list[str]] = {
@@ -571,6 +604,8 @@ class RetrievalEngine:
                 seen_content.add(key)
                 diverse.append(item)
         diversity_reordered = len(redundant)
+        if _candidate_sink is not None:
+            _candidate_sink.extend((*diverse, *redundant))
         packed = pack_evidence((*diverse, *redundant), incoming.token_budget, incoming.max_results)
         if not packed.memories:
             warnings.append("no_supported_evidence_found")
