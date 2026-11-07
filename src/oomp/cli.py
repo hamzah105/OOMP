@@ -506,12 +506,24 @@ def main(argv: list[str] | None = None) -> int:
         from .mcp.cli import mcp_command
         return mcp_command(args)
     if args.command == "doctor":
+        if args.profile is None and args.home is None:
+            try:
+                from .product.start import resolve_selection
+                selected = resolve_selection()
+                if selected is not None:
+                    args.home, args.profile = str(selected[0].home), selected[1]
+            except Exception:
+                print(json.dumps({"ok": False, "code": "invalid_start_selection"}))
+                return 1
         if args.full or args.json or args.profile or args.home:
             from .product.diagnostics import diagnose
             from .product.profiles import ProfileStore
             from .product.ui import UI
             try:
-                report = diagnose(ProfileStore(args.home), args.profile, full=args.full)
+                from .product.handoff import diagnostic_environment
+                selected_store = ProfileStore(args.home)
+                with diagnostic_environment(selected_store, args.profile):
+                    report = diagnose(selected_store, args.profile, full=args.full)
             except Exception:
                 report = {"schema_version": 1, "oomp_version": __version__, "profile": None,
                     "ok": False, "summary": {"PASS": 0, "WARN": 0, "FAIL": 1, "NOT TESTED": 0}, "checks": [{

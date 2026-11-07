@@ -13,7 +13,7 @@ from .models import Profile
 from .safety import ProductError, safe_path
 from .ui import UI
 
-COMMANDS = {"onboard", "config", "reconfigure", "up", "down", "restart", "status", "logs",
+COMMANDS = {"onboard", "config", "reconfigure", "start", "stop", "up", "down", "restart", "status", "logs",
             "install", "uninstall-integration", "connect", "host"}
 
 
@@ -25,6 +25,8 @@ def configure(subparsers, doctor):
     for name in sorted(COMMANDS):
         parser = subparsers.add_parser(name, help={
             "onboard": "preview and create an explicitly approved local profile",
+            "start": "start or reuse the approved default profile with guided first-time setup",
+            "stop": "stop only the approved default profile's authenticated supervisor",
             "config": "inspect or change profile operations settings",
             "reconfigure": "alias for config; does not rotate credentials",
             "up": "supervise owned services (foreground by default)",
@@ -37,10 +39,15 @@ def configure(subparsers, doctor):
             "connect": "run a host-owned MCP stdio server using a stored profile",
             "host": "run an explicitly supplied host command with private profile environment",
         }[name])
-        parser.add_argument("--profile", default=None if name == "onboard" else "local")
+        parser.add_argument("--profile", default=None if name in {"onboard", "start", "stop", "down", "status", "logs"} else "local")
         parser.add_argument("--home", help="profile root override; or OOMP_PROFILE_HOME")
         parser.add_argument("--plain", action="store_true")
         parser.add_argument("--json", action="store_true")
+        if name == "start":
+            parser.add_argument("--project", help="TRACE project for guided first-time setup")
+            parser.add_argument("--remember", action="store_true", help="save this explicitly selected profile for subsequent bare commands")
+            parser.add_argument("--replace-default", action="store_true", help="explicitly approve replacing the saved default selection")
+            parser.add_argument("--approve-trace-integration", action="store_true", help="approve the displayed narrow TRACE local handoff file")
         if name in {"onboard", "config", "reconfigure", "install", "uninstall-integration"}:
             parser.add_argument("--dry-run", action="store_true")
             parser.add_argument("--yes", action="store_true", help="confirm the displayed plan; never implies grant or host-code approval")
@@ -273,12 +280,19 @@ def _onboard(args, store, ui):
 def command(args):
     ui = UI(plain=args.plain)
     try:
-        store = ProfileStore(args.home)
+        if args.command == "start":
+            from .start import command as start_command
+            return start_command(args, ui)
+        if args.command in {"stop", "down", "status", "logs"}:
+            from .start import resolve_selection
+            store, args.profile = resolve_selection(args.home, args.profile, fallback=True)
+        else:
+            store = ProfileStore(args.home)
         if args.command == "onboard":
             return _onboard(args, store, ui)
-        if args.command in {"down", "status", "logs"}:
+        if args.command in {"stop", "down", "status", "logs"}:
             from .lifecycle import control, stop, logs
-            result = logs(store, args.profile) if args.command == "logs" else stop(store, args.profile) if args.command == "down" else control(store, args.profile)
+            result = logs(store, args.profile) if args.command == "logs" else stop(store, args.profile) if args.command in {"down", "stop"} else control(store, args.profile)
             if args.command == "status":
                 selected = store.load(args.profile)
                 result["extraction"] = {"mode": selected.extraction.mode if selected.extraction else "legacy",

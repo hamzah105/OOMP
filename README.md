@@ -14,6 +14,11 @@ repository does not claim a reserved or published PyPI name.
 
 ## Implemented today
 
+For this workstation's approved persistent TRACE connection, use `oomp start`
+and follow [the two-terminal local quickstart](LOCAL-LIVE-QUICKSTART.md).
+It reuses the selected private profile and existing credentials. Other projects
+require their own explicit setup and file approval.
+
 - SQLite schema v6 source history, scoped idempotency and additive migrations.
 - Conservative offline extraction, canonical identity and explicit project aliases.
 - Source-backed temporal graph/topics and narrow governed RAM conflict/supersession policy.
