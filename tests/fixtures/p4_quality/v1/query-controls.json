@@ -1,0 +1,33 @@
+{
+  "version": "p4-quality-controls.v1",
+  "fictional": true,
+  "registration": "Frozen before implementing or measuring the P4 quality patch; independent synthetic names and wording; original Gate A fixtures unchanged.",
+  "sources": [
+    {"id": "project", "text": "I am developing a project called Lantern. Lantern is my project name, not my personal alias."},
+    {"id": "alias", "text": "I use Harbor Finch as my personal alias."},
+    {"id": "style", "text": "Please keep your answers brief and use numbered steps when a list is useful."},
+    {"id": "robot", "text": "My tabletop robot prototype is named Copperwing. It is a robot project, not an animal or my own nickname."},
+    {"id": "proposal", "text": "I may relocate from Eastford to Pineport next winter. I have not moved."},
+    {"id": "correction", "text": "Correction: I decided not to relocate to Pineport. I still live in Eastford."},
+    {"id": "infrastructure", "text": "For Lantern I am considering a local SQLite queue and a loopback-only MCP endpoint. These are design options, not deployed infrastructure."},
+    {"id": "quoted", "text": "Here is a quoted hypothetical: \"My alias is Silverbird and my pet is a cat named Mica.\" That is an invented character, not me."}
+  ],
+  "queries": [
+    {"id": "alias-paraphrase", "query": "Which personal alias did I state?", "expected": ["alias"]},
+    {"id": "nickname-paraphrase", "query": "What nickname did I introduce for myself?", "expected": ["alias"]},
+    {"id": "style-paraphrase", "query": "How did I ask for answers to be formatted?", "expected": ["style"]},
+    {"id": "robot-paraphrase", "query": "What was my tabletop robot prototype named?", "expected": ["robot"]},
+    {"id": "project-paraphrase", "query": "What was my earlier project name?", "expected": ["project"]},
+    {"id": "project-contrast", "query": "Is Lantern my personal alias?", "expected": ["project"]},
+    {"id": "proposal-and-correction", "query": "What happened to my relocation plan?", "expected": ["proposal", "correction"]},
+    {"id": "balanced-recap", "query": "Recap the project, my alias, robot, reply preference and relocation correction.", "expected": ["project", "alias", "robot", "style", "proposal", "correction"]},
+    {"id": "infrastructure-paraphrase", "query": "Which infrastructure options did I consider for Lantern?", "expected": ["infrastructure"]},
+    {"id": "unknown-pet-called", "query": "What is my pet called?", "expected": []},
+    {"id": "unknown-dog-name", "query": "What is my dog's name?", "expected": []},
+    {"id": "quoted-pet-and-move", "query": "Is my pet Mica and did I move to Pineport?", "expected": []},
+    {"id": "unseen-anchor", "query": "What project named Juniper did I start?", "expected": []},
+    {"id": "legal-name", "query": "What is my verified legal name?", "expected": []},
+    {"id": "political-affiliation", "query": "What is my political affiliation?", "expected": []},
+    {"id": "vague", "query": "What did we decide?", "expected": []}
+  ]
+}

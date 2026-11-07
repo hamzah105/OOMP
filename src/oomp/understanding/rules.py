@@ -29,6 +29,14 @@ _ALIAS = re.compile(r"^(?:my (?:name|display name|test alias|alias) is|call me|I
 _PLAN = re.compile(r"^(?:I (?:am |'m )?(?:considering|planning)|I'm (?:considering|planning)|I plan to|I want to|I intend to|I will)\b", re.I)
 _UPDATE = re.compile(r"^(?:actually\b|correction\b|I (?:have |'ve )?decided|I've decided|I no longer|I changed my|instead\b)", re.I)
 _FOCUS = re.compile(r"^(?:forget (?:about )?.+for now|let'?s (?:talk|discuss)|back to|return to|resume)\b", re.I)
+_LITERAL_ALIAS = re.compile(
+    r"^(?:in this (?:(?:fictional|synthetic) )?test,\s*)?I use\s+"
+    r"([^.!?;:\n]{1,128}?)\s+as my\s+(?:(?:personal|display|test) )?alias[.!]?$", re.I)
+_RESPONSE_REQUEST = re.compile(
+    r"^(?:please\s+)?(?:keep|make)\s+(?:your\s+)?(?:replies|responses|answers|explanations)\s+"
+    r"(?:concise|brief|short|detailed|technical|simple|clear|succinct|focused|readable)\b", re.I)
+_MODAL_PLAN = re.compile(
+    r"^I\s+(?:may|might|could)\s+(?:relocate|move|build|start|study|travel|visit|apply|change|switch|develop|learn)\b", re.I)
 
 
 def blocked_reason(scope: AuthorizedScope, event: MemoryEvent, config: ExtractionConfiguration) -> str | None:
@@ -77,7 +85,13 @@ def clauses(content: str) -> tuple[SourceSpan, ...]:
     return tuple(result)
 
 
-def classify(event: MemoryEvent, span: SourceSpan):
+def classify_legacy(event: MemoryEvent, span: SourceSpan):
+    """Frozen original mind2.v1 rules for re-proving pre-correction episodes.
+
+    This is a source-derived interpretation, never a metadata-trust fallback.
+    Acquisition uses classify(); only exact historic episode reconstruction
+    uses this original grammar.
+    """
     text = span.quote.strip()
     sensitivity = "sensitive" if sensitive_text(text) else "ordinary"
     category, predicate, importance, assertion = "episodic", "stated", "low", "explicit"
@@ -114,6 +128,33 @@ def classify(event: MemoryEvent, span: SourceSpan):
     temporal = "source-time" if re.search(r"\b(?:yesterday|today|tomorrow|year|now|later)\b", text, re.I) else "unspecified"
     return dict(predicate=predicate, memory_category=category, assertion_kind=assertion,
                 importance=importance, sensitivity=sensitivity, temporal_reference=temporal)
+
+
+def classify(event: MemoryEvent, span: SourceSpan):
+    """Extend only anchored literal user forms after attribution safety checks."""
+    fields = classify_legacy(event, span)
+    if (event.source_type is not SourceType.USER or fields['sensitivity'] != 'ordinary'
+            or fields['memory_category'] != 'episodic' or fields['predicate'] != 'stated'
+            or fields['assertion_kind'] not in {'explicit', 'uncertain'}):
+        return fields
+    text = span.quote.strip()
+    alias = _LITERAL_ALIAS.fullmatch(text)
+    if fields['assertion_kind'] == 'explicit' and alias:
+        name = alias[1].strip()
+        # A single attributed display label, not alternatives or another clause.
+        tokens = name.split()
+        if (1 <= len(tokens) <= 6 and all(re.fullmatch(r"[^\W_][\w'\u2019-]*", token, re.UNICODE) for token in tokens)
+                and not any(token.casefold() in {'and','or','either','possibly','maybe','not','my','your','his','her',
+                    'their','our','its','someone','something','anything','name','alias','this','that','another','some'} for token in tokens)):
+            return {**fields, 'predicate':'alias', 'memory_category':'profile', 'importance':'normal'}
+    if fields['assertion_kind'] == 'explicit' and _RESPONSE_REQUEST.search(text):
+        # Keep original importance so already validated P2.1 literal-model
+        # procedural records retain their exact deterministic fingerprint.
+        return {**fields, 'predicate':'preference', 'memory_category':'procedural'}
+    if _MODAL_PLAN.search(text):
+        return {**fields, 'predicate':'plan', 'memory_category':'prospective',
+                'importance':'normal', 'assertion_kind':'tentative'}
+    return fields
 
 
 def sensitive_text(text):

@@ -23,7 +23,7 @@ from test_mind2_acquisition import SCOPE, event, database
 def test_genuine_pre_p2_profile_keeps_its_generation_identity_and_secrets(tmp_path):
     store = ProfileStore(tmp_path / "profiles")
     profile = Profile(name="legacy", database=str(store.directory("legacy") / "memory.sqlite3"))
-    original = profile.model_dump(mode="json", exclude={"extraction"})
+    original = profile.model_dump(mode="json", exclude={"extraction", "context_enabled"})
     legacy_identity = hashlib.sha256(json.dumps(original, sort_keys=True).encode()).hexdigest()
     assert profile.identity == legacy_identity
     store.create(profile, create_credentials=True)

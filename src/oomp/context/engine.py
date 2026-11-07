@@ -29,19 +29,25 @@ from oomp.understanding.rules import blocked_reason, classify
 
 from .contracts import ContextEvidence, ContextRequest, ContextResponse, ContextSource, ContextStatus, EvidenceResolution, RetrievalIntent
 from .packing import pack_units, source_keys
-from .planner import plan_request
+from .planner import plan_request, bounded_query_terms
 from .navigation import associated_objects
 from .validation import source_entails_memory
 
 _TOPIC_PATTERNS = {
-    'projects': re.compile(r'\bproject\b', re.I),
-    'relocation': re.compile(r'\b(?:mov\w*|relocat\w*|cities|city|candidates|infrastructure)\b', re.I),
-    'preferences': re.compile(r'\b(?:prefer\w*|response style)\b', re.I),
+    'projects': re.compile(r'\b(?:project|robot|prototype)\b', re.I),
+    'relocation': re.compile(r'\b(?:move|moved|moving|relocat\w*|cities|city|candidates|infrastructure)\b', re.I),
+    'preferences': re.compile(r'\b(?:prefer\w*|(?:response|reply|answer) style|replies|responses)\b', re.I),
     'identity-claims': re.compile(r'\b(?:alias|name|called|call me)\b', re.I),
     'sensitive-discussion': re.compile(r'\b(?:politic\w*|leadership|prime minister|religio\w*)\b', re.I),
 }
-_GENERIC = frozenset('name names response style introduce introduced decide decided decision decisions plan plans now just previous earlier old original technical conversation topic question'.split())
+_GENERIC = frozenset('name names called named call response style introduce introduced decide decided decision decisions plan plans now just previous earlier old original technical conversation topic question personal explicitly give recap summarize summarise'.split())
 _SENSITIVE_TRAIT = re.compile(r'\b(?:affiliation|nationality|ethnicity|ideology|allegiance|my religion|my political beliefs|which party)\b', re.I)
+_PET = frozenset(('pet', 'cat', 'dog', 'animal'))
+_PET_CLAIM = re.compile(r"\b(?:(?:my|our)\s+(?:pet|cat|dog|animal)|I\s+(?:have|own)\b.{0,60}\b(?:pet|cat|dog|animal))\b", re.I)
+_PROJECT_CLAIM = re.compile(r"\b(?:my\s+(?:[\w'-]+\s+){0,3}project|I(?:\s+am|'m)?\s+(?:developing|building|working on)\b.{0,80}\bproject|(?:the|my)\s+project\s+name)\b", re.I)
+_ROBOT_CLAIM = re.compile(r'\b(?:robot|robotic)\b', re.I)
+_INFRASTRUCTURE = re.compile(r'\b(?:infrastructure|SQLite|queue|endpoint|server|database|storage|deployment|deployed)\b', re.I)
+_RELOCATION_CLAIM = re.compile(r"\b(?:move|moved|moving|relocat\w*|cities|city|destination)\b|\bI\s+(?:still\s+)?live\b", re.I)
 
 
 class _Stopped(Exception):
@@ -71,36 +77,123 @@ class _Objects(ObjectMap):
 
 def _stem(word):
     word = word.casefold().removesuffix("'s")
-    for prefix in ('relocat', 'mov', 'prefer', 'politic', 'project', 'alias'):
+    if word in {'move','moves','moved','moving'}:
+        return 'move'
+    if word in {'reply','replies'}:
+        return 'reply'
+    for prefix in ('relocat', 'prefer', 'politic', 'project', 'alias'):
         if word.startswith(prefix):
             return prefix
     return word
 
 
+def _requested_facets(plan):
+    focus = {_stem(word) for word in plan.focus_terms}
+    facets = set()
+    if focus & _PET:
+        facets.add('pet')
+    if 'projects' in plan.topic_hints:
+        if 'robot' in focus or 'robotic' in focus:
+            facets.add('robot')
+        if 'project' in focus or not facets & {'robot'}:
+            facets.add('project')
+    if 'preferences' in plan.topic_hints:
+        facets.add('preference')
+    if 'identity-claims' in plan.topic_hints:
+        facets.add('alias')
+    if 'relocation' in plan.topic_hints:
+        infrastructure = 'infrastructure' in focus and not any(
+            word == 'move' or word.startswith('relocat') or word in {'city','cities','destination'} for word in focus)
+        facets.add('infrastructure' if infrastructure else 'relocation')
+    if 'sensitive-discussion' in plan.topic_hints:
+        facets.add('sensitive-discussion')
+    return facets
+
+
+def _text_facets(quote, plan):
+    facets = set()
+    robot = bool(_ROBOT_CLAIM.search(quote))
+    if robot:
+        facets.add('robot')
+    if not robot and _PROJECT_CLAIM.search(quote):
+        facets.add('project')
+    # An explicit moving-candidates question can need the literal candidate
+    # clause alongside its plan. This admits discussion support only; it does
+    # not classify the clause as a plan or assert that any move occurred.
+    candidate_support = ('relocation' in plan.topic_hints
+        and bool({'candidate','candidates'} & set(plan.focus_terms))
+        and re.search(r'\b(?:(?:are|were|remain)\s+(?:(?:possible|potential)\s+)?candidates|candidate\s+(?:cities|destinations|places))\b',quote,re.I))
+    if _RELOCATION_CLAIM.search(quote) or candidate_support:
+        facets.add('relocation')
+    if _INFRASTRUCTURE.search(quote):
+        facets.add('infrastructure')
+    if _PET_CLAIM.search(quote):
+        facets.add('pet')
+    if _TOPIC_PATTERNS['preferences'].search(quote):
+        facets.add('preference')
+    if _TOPIC_PATTERNS['identity-claims'].search(quote):
+        facets.add('alias')
+    if _TOPIC_PATTERNS['sensitive-discussion'].search(quote):
+        facets.add('sensitive-discussion')
+    return facets
+
+
+def _anchor_matches(quote, plan):
+    return not plan.anchors or any(
+        re.search(r'(?<!\w)' + re.escape(anchor) + r'(?!\w)', quote, re.I)
+        for anchor in plan.anchors)
+
+
 def _relevant(quote, plan):
-    if plan.topic_hints:
-        return any(_TOPIC_PATTERNS[topic].search(quote) for topic in plan.topic_hints if topic in _TOPIC_PATTERNS)
+    if not _anchor_matches(quote, plan):
+        return False
+    facets = _requested_facets(plan)
+    if facets:
+        return bool(facets & _text_facets(quote, plan))
     focus = {_stem(word) for word in plan.focus_terms if word not in _GENERIC}
     words = {_stem(word) for word in re.findall(r"[^\W_]+(?:'s)?", quote, re.UNICODE)}
     return bool(focus & words) or any(anchor.casefold() in quote.casefold() for anchor in plan.anchors)
 
 
-def _claim_relevant(quote, plan, fields, memory):
+def _matching_facets(quote, plan, fields, memory):
     """A project's name is not a person's claimed alias.
 
     Called only after independent source entailment. P2.1 literal refinements
     may be more specific than the rules classifier; their fields have already
     been re-proved by the literal validator, not trusted as arbitrary metadata.
     """
-    if 'identity-claims' not in plan.topic_hints:
-        return _relevant(quote, plan)
+    if not _anchor_matches(quote, plan):
+        return set()
+    supported = _text_facets(quote, plan)
     alias = fields['predicate'] == 'alias' and fields['memory_category'] == 'profile'
     alias |= (memory.metadata.get('canonicalization_version') == 'p2.1'
               and memory.metadata.get('predicate') == 'alias'
               and memory.metadata.get('category') == 'profile')
-    return any(alias if topic == 'identity-claims' else
-               bool(_TOPIC_PATTERNS[topic].search(quote))
-               for topic in plan.topic_hints if topic in _TOPIC_PATTERNS)
+    if not alias:
+        supported.discard('alias')
+    preference = fields['predicate'] == 'preference'
+    preference |= (memory.metadata.get('canonicalization_version') == 'p2.1'
+                   and memory.metadata.get('predicate') == 'preference'
+                   and memory.metadata.get('category') in {'profile','procedural'})
+    if preference:
+        supported.add('preference')
+    else:
+        supported.discard('preference')
+    if fields['predicate'] == 'project' and not _ROBOT_CLAIM.search(quote):
+        supported.add('project')
+    if 'anchored_identity_contrast' in plan.reasons and not alias:
+        # A source can refute a proposed alias by identifying the anchored
+        # project. Its public claim type and proof remain unchanged.
+        negative_alias = re.search(r'\bnot\s+(?:(?:my|a|an)\s+)?(?:personal\s+)?(?:alias|nickname)\b',quote,re.I)
+        if 'project' in supported or negative_alias:
+            supported.add('alias')
+    return supported & _requested_facets(plan)
+
+
+def _claim_relevant(quote, plan, fields, memory):
+    if _requested_facets(plan):
+        return bool(_matching_facets(quote, plan, fields, memory))
+    return _relevant(quote, plan)
 
 
 def _identity(*values):
@@ -164,7 +257,7 @@ class ContextEngine:
                 return response(ContextStatus.UNCERTAIN)
             # Query variants share one bounded disjunction and one existing
             # lexical/semantic/entity/topic ranking pass, not three scans.
-            terms = tuple(dict.fromkeys(word for variant in plan.query_variants for word in re.findall(r'[^\W_]+', variant, re.UNICODE)))[:32]
+            terms = bounded_query_terms(plan)
             query_text = ' '.join(terms)[:4096]
             historical = request.historical or plan.retrieval_intent is RetrievalIntent.HISTORICAL_CORRECTION
             valid_at = request.effective_valid_at
@@ -400,6 +493,50 @@ class ContextEngine:
             if proof is not None:
                 eligible[evidence.memory_id] = (evidence, proof)
         trace['context_relevant_memories'] = len(eligible)
+        if 'conjunctive_claim_query' in plan.reasons:
+            # Keep an entity mentioned in one conjunct from satisfying the
+            # anchor for another. Hints are re-planned from each literal
+            # clause; global request/recent-turn hints supply no authority.
+            clauses = re.split(r'\s+and\s+', request.query, maxsplit=8, flags=re.I)
+            if len(clauses) > 8:
+                trace['uncertain_withheld'] = 1
+                reasons.append('conjunctive_query_bound_exceeded')
+                return (), ()
+            clause_plans = []
+            for clause in clauses:
+                check()
+                clause_plans.append(plan_request(request.model_copy(update={
+                    'query':clause, 'anchors':(), 'recent_user_turns':()})))
+            required = set(range(len(clause_plans)))
+            covered = set()
+            admitted = {}
+            for identifier, (evidence, proof) in eligible.items():
+                unit_covered = set()
+                for source in proof[1]:
+                    check()
+                    event = _event_in_scope(c,scope,source.event_id)
+                    if event is None:
+                        raise ValueError('context_conjunctive_source_missing')
+                    span = SourceSpan(start=source.span_start,end=source.span_end,
+                        quote=event.content[source.span_start:source.span_end])
+                    fields = classify(event,span)
+                    matching = {index for index, clause_plan in enumerate(clause_plans)
+                        if _claim_relevant(span.quote,clause_plan,fields,proof[0])}
+                    if not matching:
+                        break
+                    unit_covered.update(matching)
+                else:
+                    admitted[identifier] = (evidence,proof)
+                    covered.update(unit_covered)
+            eligible = admitted
+            trace['context_relevant_memories'] = len(eligible)
+            if required - covered:
+                # Partial topical overlap cannot answer a multi-condition
+                # personal assertion. Keep an honest reason-coded abstention.
+                trace['query_facets_unanswered'] = len(required-covered)
+                trace['uncertain_withheld'] = 1
+                reasons.append('conjunctive_query_unanswered')
+                return (), ()
         # Include both ends of an endorsed dispute as one atomic evidence unit.
         groups = []
         blocked = set()

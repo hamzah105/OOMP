@@ -28,6 +28,14 @@ Core operation needs Python 3.11+, SQLite with FTS5 and Pydantic. It needs no
 TRACE, MongoDB, model, GPU, API key or network service. Models and MCP are optional.
 See [limitations](https://github.com/hamzah105/OOMP/blob/main/docs/limitations.md) before using private or important data.
 
+For the reviewed local submission candidate, start with
+[submission readiness](docs/SUBMISSION-READINESS.md) and the
+[Windows manual guide](docs/MANUAL-TESTING.md). The public
+[generic MCP host](docs/generic-context-host.md) uses the official SDK without
+importing OOMP internals. Managed profiles enable context retrieval explicitly
+with `oomp onboard --context` or `oomp reconfigure --context`; existing profiles
+remain unchanged by default.
+
 ## Install from source and try it
 
 From PowerShell, with Git and Python installed:

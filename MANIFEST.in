@@ -9,6 +9,7 @@ recursive-include scripts *.py
 recursive-include benchmarks *.py *.json *.md *.sha256
 recursive-include docs *.md *.json
 recursive-include tests *.py
+recursive-include tests/fixtures/p4_quality *.json *.sha256
 recursive-include .github *.yml *.yaml *.md
 prune benchmarks/results
 prune .test-artifacts

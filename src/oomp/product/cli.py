@@ -48,6 +48,8 @@ def configure(subparsers, doctor):
             parser.add_argument("--port", type=int)
             parser.add_argument("--transport", choices=("streamable-http", "stdio"))
             parser.add_argument("--mind", action=argparse.BooleanOptionalAction, default=None)
+            parser.add_argument("--context", dest="context_enabled", action=argparse.BooleanOptionalAction,
+                                default=None, help="explicitly enable/disable the opt-in memory.context tool")
             parser.add_argument("--embedding-model")
             parser.add_argument("--embedding-dimension", type=int)
             parser.add_argument("--embedding-endpoint", default="http://127.0.0.1:11434")
@@ -241,7 +243,8 @@ def _onboard(args, store, ui):
     profile = Profile(name=name, adapter=adapter, project=str(safe_path(project)) if project and adapter != "standalone" else None,
         database=database, transport=transport, mode=mode, tenant=tenant, namespace=namespace,
         principal=principal, port=8765 if port is None else port, mind=mind, read_source=read_source, provider=provider,
-        extraction=extraction, secret_source=args.secret_source, owner_id=owner if adapter == "trace" else None,
+        extraction=extraction, context_enabled=args.context_enabled,
+        secret_source=args.secret_source, owner_id=owner if adapter == "trace" else None,
         host_origin=args.host_origin, publication=publication, host_python=args.host_python,
         approved_project=project_fingerprint(project) if publication else {},
         mongo_uri_env=args.mongo_uri_env, mongo_database=args.mongo_database)
@@ -290,7 +293,7 @@ def command(args):
             return 1 if failed else 0
         profile = store.load(args.profile)
         if args.command in {"config", "reconfigure"}:
-            changes = {key: getattr(args, key) for key in ("port", "mind", "transport") if getattr(args, key) is not None}
+            changes = {key: getattr(args, key) for key in ("port", "mind", "transport", "context_enabled") if getattr(args, key) is not None}
             provider = _provider(args, profile.provider)
             if provider != profile.provider:
                 changes["provider"] = provider.model_dump(mode="json") if provider else None
