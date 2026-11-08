@@ -188,6 +188,8 @@ browser or direct SQL, prefer an owner-approved **WAL-consistent snapshot** open
 read-only. Copying only a live `.sqlite3` file can omit committed WAL data;
 `immutable=1` is not a safe shortcut for inspecting an active WAL database.
 Follow [storage](docs/storage.md) and [backup/retention](docs/privacy-retention.md).
+For existing episodic memories, use the [read-only inspection guide](docs/memory-inspection.md),
+which also explains why an ObjectMap can be empty while episodes are stored.
 
 ## Connect an AI host
 
