@@ -135,7 +135,7 @@ def test_doctor_resolves_only_approved_publisher_reference_and_restores_environm
     store=ProfileStore(tmp_path/'p')
     profile=Profile(name='trace',adapter='trace',project=str(project),
         database=str(store.directory('trace')/'memory.sqlite3'),mode='trusted-ingest',
-        owner_id='000000000000000000000001',publication=True,host_python=sys.executable,
+        owner_id='000000000000000000000001',publication=True,host_python=str(Path(sys.executable).resolve()),
         approved_project={'reviewed':'1'*64},mongo_uri_env='HANDOFF_TEST_URI',mongo_database='fictional')
     store.create(profile,create_credentials=True)
     calls=[]
