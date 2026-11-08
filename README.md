@@ -1,203 +1,303 @@
-# OOMP — Object-Oriented Context Map
+# OOMP · Object-Oriented Context Map
 
-OOMP is a local research memory library for AI applications. It persists source
-events, derives attributed canonical memories, maintains temporal relationships
-and returns bounded evidence with original provenance. An application can recall
-an older project fact after it leaves its recent conversation window, while
-retaining changed and disputed claims for inspection.
+**Memory beyond the context window.**
 
-OOMP returns **evidence, not an answer**. It does not enlarge a model's context
-window, verify that a user's assertion is true or guarantee protection against
-prompt injection. Version **0.1.0** is an **alpha research release candidate**,
-licensed under [Apache-2.0](https://github.com/hamzah105/OOMP/blob/main/LICENSE). Publication is a maintainer decision; this
-repository does not claim a reserved or published PyPI name.
+Persistent history. Selective recall. Finite prompt.
 
-## Implemented today
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
+[![Status: Alpha](https://img.shields.io/badge/Status-Alpha-orange)](docs/SUBMISSION-READINESS.md)
 
-For this workstation's approved persistent TRACE connection, use `oomp start`
-and follow [the two-terminal local quickstart](LOCAL-LIVE-QUICKSTART.md).
-It reuses the selected private profile and existing credentials. Other projects
-require their own explicit setup and file approval.
+OOMP is a local-first persistent-memory layer for AI hosts. It stores original
+source events, derives attributed memories, and retrieves relevant evidence from
+earlier sessions for a finite model prompt. Projects, preferences, plans and
+discussions can remain inspectable after they leave the recent conversation.
 
-- SQLite schema v6 source history, scoped idempotency and additive migrations.
-- Conservative offline extraction, canonical identity and explicit project aliases.
-- Source-backed temporal graph/topics and narrow governed RAM conflict/supersession policy.
-- FTS5/BM25 retrieval, optional local Ollama vectors, rank fusion and bounded evidence packing.
-- Explicit durable Mind workers, restart-safe jobs, extractive projections and privileged local erasure.
-- Optional official-SDK MCP over stdio or authenticated loopback HTTP; writes require separate host approval.
-- Independent [TRACE integration](https://github.com/hamzah105/trace-ai-chatbot) and reproducible synthetic benchmarks.
-- P1 guided onboarding, private profiles, managed MCP/Mind processes and measured operational diagnostics.
-- P2 clause-grounded acquisition, attributed source-linked episodes and reviewable corrections, with offline rules and explicitly configured local Ollama proposals.
+**OOMP supplies evidence; the host's language model generates the answer.** It
+does not expand a model's native context window or establish that a source claim
+is true. Version **0.1.0** is an alpha research candidate.
 
-Core operation needs Python 3.11+, SQLite with FTS5 and Pydantic. It needs no
-TRACE, MongoDB, model, GPU, API key or network service. Models and MCP are optional.
-See [limitations](https://github.com/hamzah105/OOMP/blob/main/docs/limitations.md) before using private or important data.
+[Quickstart](#quickstart) · [Architecture](#architecture) · [Inspect memory](#inspect-stored-memory) · [Integration](#connect-an-ai-host) · [Status](#project-status) · [Documentation](#documentation)
 
-For the reviewed local submission candidate, start with
-[submission readiness](docs/SUBMISSION-READINESS.md) and the
-[Windows manual guide](docs/MANUAL-TESTING.md). The public
-[generic MCP host](docs/generic-context-host.md) uses the official SDK without
-importing OOMP internals. Managed profiles enable context retrieval explicitly
-with `oomp onboard --context` or `oomp reconfigure --context`; existing profiles
-remain unchanged by default.
+## Why OOMP?
 
-## Install from source and try it
+An AI application needs more than a longer transcript to resume earlier work.
+It needs to select the right prior evidence, retain changed intentions, explain
+where a claim came from, and keep one identity's history out of another's context.
 
-From PowerShell, with Git and Python installed:
+| Need | Implemented approach |
+| --- | --- |
+| Continue across sessions | SQLite source history and selective recall, independent of the answer model |
+| Inspect an answer's support | Original event IDs, source references and exact validated spans |
+| Keep changing plans understandable | Distinct occurrence, recording and validity semantics; governed corrections and retractions |
+| Navigate related memories | Stable objects, explicit aliases, multiple hierarchy paths and typed graph relationships |
+| Work without a model service | Deterministic extraction and lexical retrieval; model use is an explicit option |
+| Operate locally | Private profiles, owned MCP/Mind processes, diagnostics and read-only inspection tools |
 
-The P1/P2 commands below belong to the local product candidate until the maintainer
-reviews and pushes it. Use that reviewed checkout/source archive; cloning remote
-main does not acquire uncommitted product files automatically.
+## Quickstart
 
-~~~powershell
-git clone https://github.com/hamzah105/OOMP.git
+Python **3.11+**, SQLite with **FTS5**, and Pydantic are the core requirements.
+Python 3.11 and 3.12 have recorded validation; exact environments and test scope
+are linked below. TRACE, MongoDB, a GPU and model credentials are unnecessary for
+core operation.
+
+### Installation
+
+The product candidate is on `feature/p4-retrieval-quality`; `main` can represent
+an earlier accepted integration. Install from the checkout containing this README.
+These commands do not assume a published PyPI package or release image.
+
+```powershell
+git clone --branch feature/p4-retrieval-quality https://github.com/hamzah105/OOMP.git
 cd OOMP
 py -3.11 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install --upgrade "pip>=26.2.2,<27"
-.\.venv\Scripts\python.exe -m pip install ".[mcp,ui]"
-.\.venv\Scripts\oomp.exe --version
-.\.venv\Scripts\oomp.exe doctor
-.\.venv\Scripts\oomp.exe onboard --profile local
-.\.venv\Scripts\oomp.exe up --profile local --background
-.\.venv\Scripts\oomp.exe doctor --full --profile local
-.\.venv\Scripts\oomp.exe status --profile local
-.\.venv\Scripts\oomp.exe down --profile local
-~~~
+.\.venv\Scripts\Activate.ps1
+python -m pip install ".[mcp,ui]"
+oomp --version
+python examples/quickstart.py
+```
 
-Onboarding previews every file, asks before generating credentials or creating a
-**new** database, and starts no services. Defaults are read-only and lexical-only;
-scope strings are trusted local administrator settings, not remote authentication.
-Core installation remains Pydantic-only. `[mcp]` enables services; `[ui]` adds
-optional keyboard menus/color with plain and `NO_COLOR` alternatives.
+On Linux/macOS, create the environment with `python3 -m venv .venv` and activate
+it with `source .venv/bin/activate`, then use the same install/demo commands.
+The core-only alternative is `python -m pip install .`; `[mcp]` adds the official
+MCP SDK/server dependencies, `[ui]` adds optional color/keyboard menus, and `[dev]`
+adds pytest. Plain output and `NO_COLOR` remain available.
 
-For a fully synthetic authenticated ingest → separate worker → retrieval/proof →
-restart → shutdown demo, run `python examples/product_quickstart.py` with the
-installed interpreter. It creates disposable storage and uses no normal profile,
-TRACE, model or private history. The earlier `examples/quickstart.py` remains an
-independent core-only API demonstration.
+The core example uses temporary fictional data, checks persistence and bounded
+source-backed recall, and makes no model calls. It changes no normal profile.
 
-[Getting started](https://github.com/hamzah105/OOMP/blob/main/docs/getting-started.md) explains the Python API, explicit
-database initialization and optional installation. The wheel contains the runtime
-package; the source archive also contains docs, tests, examples and benchmarks.
+### Exercise managed services with fictional data
 
-## Background work and MCP
+With `[mcp]` installed, the public walkthrough creates its own isolated profile,
+performs signed intake, drains a separate Mind worker, inspects the object map,
+checks context/provenance and verifies restart/shutdown:
 
-One command supervises OOMP-owned MCP and Mind processes. Foreground operation is
-the default (`oomp up --profile local`, Ctrl+C to stop); background operation must
-be explicitly requested. Inspect safe operational codes or restart the profile:
+```powershell
+$demo = Join-Path $env:TEMP ('od-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
+python examples/submission_demo.py --directory $demo
+$result = Get-Content (Join-Path $demo 'acceptance.json') -Raw | ConvertFrom-Json
+```
 
-~~~powershell
-.\.venv\Scripts\oomp.exe logs --profile local
-.\.venv\Scripts\oomp.exe restart --profile local --background
-.\.venv\Scripts\oomp.exe doctor --full --profile local --json
-.\.venv\Scripts\oomp.exe down --profile local
-~~~
+The target must be **new**, its parent must exist, and Windows paths should stay
+short. The demonstration uses rules-only extraction and no TRACE, MongoDB,
+embedding model or answer model. Its retained fictional profile contains private
+credentials: keep the directory out of Git and inspect the credential-free JSON
+reports rather than printing `secrets.json`.
 
-The [P1 operator guide](https://github.com/hamzah105/OOMP/blob/main/docs/product-onboarding.md) covers standalone setup,
-read-only discovery, generic MCP templates, explicit TRACE publication and safe
-reconfiguration. Existing manual worker/MCP commands and SDK examples remain
-available for advanced separate process control. Follow
-[MCP configuration and tools](https://github.com/hamzah105/OOMP/blob/main/docs/mcp-integration.md) for explicit scope, origin,
-credential provisioning, read-only grants and separately signed ingestion.
-Compatibility with every desktop host is not claimed.
+### Configure your own profile
 
-## Conversational memory acquisition (P2 candidate)
+`oomp onboard` previews configuration and asks before creating a new database or
+credentials. It starts no services and never adopts an existing database as new.
 
-New product profiles use improved offline rules; existing profiles and manual
-workers retain legacy extraction until explicitly reconfigured. P2 separates
-user claims, tentative plans, aliases, questions, quoted/assistant discussion,
-low-salience episodes and reviewable corrections. A question elsewhere in a
-message no longer discards its declarative clauses. Exact source spans and live
-source governance remain the persistence boundary; an alias is an unverified
-display claim, and a correction does not erase earlier evidence.
-
-Optional `--extraction-mode local-llm --extraction-model <installed-model>`
-configuration sends text only to an explicitly configured literal-loopback Ollama
-endpoint. OOMP downloads no weights and makes no external model API calls.
-Extraction and embedding models have separate settings. Rules continue when the
-provider fails. `doctor --full` separates model reachability from an actual
-synthetic capability check; `oomp understand episodes` and `inspect` provide
-scoped local inspection. Content display requires `--show-content`.
-
-On 30 frozen synthetic conversations (247 opportunities), improved rules measured
-96.36% candidate precision and 94.64% recall, with exact accepted provenance in
-220/220 cases. **Labels are Codex drafts pending independent human review.** The
-actual local-model run made 25 requests, returned no usable proposals and fell
-back to rules; it demonstrates degradation handling, not model quality gains.
-Natural phrasing, sensitive discussion and topic resolution still have documented
-misses. P2 uses schema v5 without migration and adds no P3 hierarchy or P4 context
-virtualization. See the [P2 report](docs/product-milestone-P2-report.md) and
-[reproducible acquisition benchmark](benchmarks/mind2/README.md) for measured
-results, limits and remaining acceptance gates.
-
-Try the verified [offline Mind 2 example](examples/mind2_quickstart.py) with the
-installed interpreter. It uses fictional conversations and temporary storage,
-checks exact evidence, tentative episodes, replay and retraction, and makes no
-model calls or service connections:
-
-~~~powershell
-.\.venv\Scripts\python.exe examples/mind2_quickstart.py
-~~~
-
-The measured run used 12 source events, 13 memories and four episode summaries;
-three events were excluded from derived acquisition. Existing directories are
-refused when an explicit `--directory` is supplied.
-
-Local Windows validation passed all 682 tests on Python 3.11.4 and a fresh
-installed wheel on Python 3.12.6, plus distribution and clean-install checks.
-Hosted Windows/Ubuntu CI, independent label review and successful real-model
-extraction remain pending. Episode grouping uses coarse keyword/time heuristics;
-physical-object movement can share a relocation label. It does not establish
-general topic resolution.
-
-## Reproduce the research
-
-Run from a checkout or extracted source archive:
-
-~~~powershell
-.\.venv\Scripts\python.exe -m pip install ".[dev,mcp,ui]"
-.\.venv\Scripts\python.exe -m pytest -v
-.\.venv\Scripts\python.exe -m benchmarks.runner --action plan --config benchmarks/configs/offline.json
-.\.venv\Scripts\python.exe -m benchmarks.runner --config benchmarks/configs/offline.json --output benchmarks/results/my-smoke
-.\.venv\Scripts\python.exe -m benchmarks.runner --action validate --run benchmarks/results/my-smoke
-~~~
-
-Every result path must be new. Default experiments are offline; real embeddings
-and generated answers require separate explicit opt-in. No model is downloaded.
-See [benchmark reproduction](https://github.com/hamzah105/OOMP/blob/main/docs/benchmark-reproduction.md) for frozen seeds,
-baselines, source-level scoring, costs, uncertainty and failure accounting.
-
-Stage 9's selected synthetic held-out comparison measured Recall@8 of **0.9286**
-for OOMP, **0.7857** for flat lexical and **0.2381** for latest-eight memory on
-112 positive queries. Recent-fact controls tied, neighborhood expansion gave no
-measured recall/path gain, and curated temporal inputs limit generalization. In a
-small real embedding sample, flat vectors and hybrid OOMP both recovered four
-positive cases and both returned evidence on all four unanswerable cases.
-**Live LLaMA answer-quality evaluation was not executed.** These are internal
-retrieval observations, not universal superiority or final-answer accuracy.
-[Original results and uncertainty](https://github.com/hamzah105/OOMP/blob/main/docs/stage9-validation.md),
-[reviewed JSON](https://github.com/hamzah105/OOMP/blob/main/docs/examples/stage9-results.json).
-
-## Guides and project status
-
-| Task | Guide |
+| Command | Purpose |
 | --- | --- |
-| Guided setup / one-command operation | [P1 operator guide](https://github.com/hamzah105/OOMP/blob/main/docs/product-onboarding.md), [CLI/diagnostics](https://github.com/hamzah105/OOMP/blob/main/docs/product-cli.md), [P1 evidence](https://github.com/hamzah105/OOMP/blob/main/docs/product-milestone-P1-report.md) |
-| P1 stabilization / P2 acquisition candidate | [P1 stabilization](docs/product-milestone-P1-stabilization.md), [P2 implementation and measured limits](docs/product-milestone-P2-report.md), [Mind 2 benchmark](benchmarks/mind2/README.md) |
-| P3 local object-map review | [Object architecture](docs/object-memory-architecture.md), [offline CLI/quickstart](docs/object-memory-cli.md), [P3 evidence](docs/product-milestone-P3-report.md) |
-| First use / examples | [Getting started](https://github.com/hamzah105/OOMP/blob/main/docs/getting-started.md) |
-| Public interfaces and compatibility | [API reference](https://github.com/hamzah105/OOMP/blob/main/docs/api-reference.md) |
-| Development / providers / migrations | [Developer guide](https://github.com/hamzah105/OOMP/blob/main/docs/developer-guide.md), [Contributing](https://github.com/hamzah105/OOMP/blob/main/CONTRIBUTING.md) |
-| Storage and backup / erasure | [Privacy and retention](https://github.com/hamzah105/OOMP/blob/main/docs/privacy-retention.md) |
-| Trust boundaries | [Security model](https://github.com/hamzah105/OOMP/blob/main/docs/security-model.md), [Report a vulnerability](https://github.com/hamzah105/OOMP/blob/main/SECURITY.md) |
-| Troubleshooting | [Troubleshooting](https://github.com/hamzah105/OOMP/blob/main/docs/troubleshooting.md) |
-| Research design / manuscript | [Research plan](https://github.com/hamzah105/OOMP/blob/main/docs/research-plan.md), [Paper draft](https://github.com/hamzah105/OOMP/blob/main/docs/research-paper-draft.md) |
-| Release evidence and pending gates | [Release checklist](https://github.com/hamzah105/OOMP/blob/main/docs/release-checklist.md), [Stage 10 validation](https://github.com/hamzah105/OOMP/blob/main/docs/stage10-validation.md) |
-| Milestone history | [Roadmap](https://github.com/hamzah105/OOMP/blob/main/docs/roadmap.md), [Changelog](https://github.com/hamzah105/OOMP/blob/main/CHANGELOG.md) |
+| `oomp onboard --profile NAME` | Guided setup; explicit host, scope and authority choices |
+| `oomp config --profile NAME --json` | Inspect settings and secret references without values |
+| `oomp up --profile NAME` | Foreground supervisor; Ctrl+C stops owned services |
+| `oomp up --profile NAME --background` | Explicit background supervision |
+| `oomp doctor --full --profile NAME` | Report PASS / WARN / FAIL / NOT TESTED accurately |
+| `oomp status --profile NAME` / `oomp logs --profile NAME` | Authenticated runtime status / bounded operational codes |
+| `oomp down --profile NAME` | Stop only the authenticated owning supervisor |
 
-Default deployment is local-first, with plaintext SQLite protected by host file
-permissions. SQLite is not a distributed database; public/proxy/cloud MCP hosting
-needs further security engineering. A budget counts selected evidence and does
-not certify a larger context window. [Stage 10's report](https://github.com/hamzah105/OOMP/blob/main/docs/stage-10-report.md)
-separates local acceptance from configured-but-unexecuted GitHub CI and pending
-human publication decisions. No release/push/upload is automatic.
+Add `--home PATH` when using a nondefault profile root. For the separately approved
+persistent TRACE setup, `oomp start` reuses the saved selection and credentials;
+`oomp stop`, bare status and full doctor use that selection. First-time TRACE
+setup requires the reviewed matching TRACE bootstrap, owner validation and file
+approval. It does not install arbitrary host code. See the
+[two-terminal guide](LOCAL-LIVE-QUICKSTART.md) and [operator guide](docs/product-onboarding.md).
+
+## Architecture
+
+```mermaid
+flowchart TD
+    H["AI host / authorized source"] -->|"signed, approved ingest"| M["MCP authorization boundary"]
+    M --> E["SQLite source events"]
+    E --> J["Durable Mind jobs"]
+    J --> X["Rules / optional local-model proposals"]
+    X --> V["Independent source and policy validation"]
+    V --> C["Canonical memories + attributed episodes"]
+    C --> G["Temporal graph + topics"]
+    C --> O["Explicit ObjectMap projection"]
+    C --> I["Derived lexical / optional vector indexes"]
+    H -->|"authenticated recall request"| R["Bounded retrieval and context planning"]
+    G --> R
+    O --> R
+    I --> R
+    E -->|"revalidated original support"| R
+    R --> P["Finite evidence packet + provenance + uncertainty"]
+    P --> H
+```
+
+The trusted in-process Python API is another interface to the same engine.
+Remote hosts communicate over MCP; an authenticated grant supplies their scope.
+The host validates its authoritative source ownership before using returned
+evidence. Source text, summaries and retrieved packets remain untrusted data.
+
+### What is stored?
+
+| Layer | Role |
+| --- | --- |
+| Source events | Original messages/documents, role, source identity and timestamps, subject to explicit retention/erasure governance |
+| Canonical memories | Attributed claims linked to original evidence through `memory_sources` |
+| Entities and objects | Source-supported identity/alias records and stable typed object anchors |
+| Temporal graph and topics | Many-to-many relationships, memberships and controlled correction/conflict lineage |
+| Episodes and summaries | Attributed discussion segments and source-backed extractive revisions |
+| ObjectMap | A bounded navigational DAG over existing eligible records, with referenced proofs |
+| Retrieval indexes | Derived FTS5/BM25 and optional compatible embedding-space caches |
+| Mind state | Durable jobs, retries, leases/fencing, review proposals and maintenance audit |
+
+The hierarchy does **not** replace the graph or duplicate original evidence into
+every path. One object can appear under several topics. P3 projection is explicit;
+a read does not silently build a map, refresh an index or rewrite a summary.
+
+## Inspect stored memory
+
+Managed profile settings expose the configured `database`, `tenant`, `namespace`
+and `principal` through `oomp config --profile NAME --home PATH --json`.
+These are filesystem-authorized local administrative operations, not remote
+authentication. Keep private profile configuration out of shared diagnostics.
+
+The following commands inspect **only the fictional walkthrough above**:
+
+```powershell
+$db = $result.database
+$scope = @('--db', $db, '--tenant', $result.scope.tenant, '--namespace', $result.scope.namespace, '--principal', $result.scope.principal)
+oomp storage status --db $db
+oomp memory list --db $db --tenant $result.scope.tenant --namespace $result.scope.namespace --limit 20
+oomp memory tree @scope --depth 7 --limit 100 --json
+oomp memory inspect $result.project_object_id @scope --show-provenance --json
+oomp memory history $result.project_object_id @scope --json
+oomp memory explain $result.project_object_id @scope --json
+oomp memory find LUMENDEMO @scope --json
+oomp memory export @scope --redacted --json
+```
+
+`memory list` lists canonical-memory IDs and evidence counts; it is a legacy
+tenant/namespace view. The other commands inspect the principal-selected P3
+projection. An empty tree can mean the map has not been built even when source
+events or canonical memories exist. Do not run `build-map`, `rebuild-map`,
+`memory index` or `storage init` as an inspection step on private storage.
+
+Defaults hide source excerpts, but labels and identifiers can still be private.
+`--show-content` explicitly reveals content to the trusted operator. Object
+export is always redacted; stable IDs can still permit correlation. See the
+[complete object CLI](docs/object-memory-cli.md) for temporal filters and limits.
+
+SQLite is the persistent store, independent of TRACE's MongoDB. For a database
+browser or direct SQL, prefer an owner-approved **WAL-consistent snapshot** opened
+read-only. Copying only a live `.sqlite3` file can omit committed WAL data;
+`immutable=1` is not a safe shortcut for inspecting an active WAL database.
+Follow [storage](docs/storage.md) and [backup/retention](docs/privacy-retention.md).
+
+## Connect an AI host
+
+The optional official **MCP 2.3** adapter supports stdio and authenticated
+loopback Streamable HTTP. Read authority, raw-source access, signed ingestion
+approval and privileged local erasure are separate boundaries. Ordinary retrieval
+does not gain write authority.
+
+`memory.retrieve` retains its existing contract. The opt-in `memory.context`
+tool adds `oomp.context.v1`: bounded intent planning, canonical/object/episode
+evidence resolutions, original-source checks and explicit uncertainty/failure
+states. Existing profiles keep context retrieval disabled unless selected with
+`--context`. The inherited `token_budget` field counts **UTF-8 packet bytes**,
+not exact model tokens; the outer protocol and host prompt need additional space.
+
+An independent host example uses the SDK without importing OOMP internals:
+
+```powershell
+python examples/generic_context_host.py 'What projects have I discussed?' --token-budget 6000 --get-source
+```
+
+This requires an already authorized context-enabled endpoint and a reader secret
+provided through the documented `MCP_BEARER_TOKEN` environment reference. It reads
+no database, starts no service/model and requests source metadata only.
+[Generic host guide](docs/generic-context-host.md) · [MCP tools and grants](docs/mcp-integration.md) · [Context contract](docs/context-retrieval-api.md)
+
+[TRACE.AI](https://github.com/hamzah105/trace-ai-chatbot) is a separate FastAPI /
+MongoDB / Ollama chatbot. Its approved publication worker sends eligible completed
+interactions; its retrieval path verifies owner/session/role provenance against
+MongoDB before selecting OOMP evidence for a bounded prompt. OOMP remains usable
+without TRACE, and TRACE can operate with memory disabled. Compatibility with
+every MCP host or public cloud deployment is not claimed.
+
+## Project status
+
+The original [Stage 1–10 history](docs/roadmap.md) and the later
+[P1–P5 product roadmap](docs/product-roadmap.md) are separate tracks. The October
+2026 proposal is design intent; current source and dated reports determine status.
+
+| Product milestone | Current evidence |
+| --- | --- |
+| P1 · onboarding and operations | Implemented and locally validated; persistent two-terminal TRACE startup has current focused evidence |
+| P2 / P2.1 · conversational acquisition | Rules, attributed episodes and independently validated local-model proposals implemented; one incremental real-model memory persisted in a controlled synthetic case |
+| P3 · object memory | Implemented and validated: schema v6, stable identities, multiple navigation paths and original-source proofs |
+| P4 · context virtualization | Engine and TRACE adapter implemented; local Gates A/C accepted, Gate B answer evaluation incomplete |
+| P5 · product/research readiness | Submission-focused demos, packaging and usability work implemented; full independent research/release gates remain pending |
+
+### Measured validation, with its limits
+
+- **P2.1:** one independently validated incremental model proposal persisted
+  through a real Mind job and database reopen. This does not establish broad
+  extraction quality. [Acceptance report](docs/product-milestone-P21-model-acceptance.md)
+- **P3:** 767 tests passed on each of Windows Python 3.11 and 3.12 at that source
+  snapshot. [P3 report](docs/product-milestone-P3-report.md)
+- **P4 Gate A:** 137/137 checks, 12/12 frozen scenarios, source recall 16/16 and
+  precision 16/18. **Gate C:** 18/18 independent-host checks. These are local
+  experimental results. [Final P4 record](docs/P4-FINAL-ACCEPTANCE.md)
+- **P4 Gate B:** 22 model answers, one deadline failure and 41 unrun cases out
+  of 64 planned. On five fully paired cases, OOMP and flat lexical each scored
+  3/5. No superiority or full P4 acceptance is demonstrated.
+- **Submission preparation:** four core-only clean installs and 32 CLI checks;
+  111 focused tests on each Python version. [P5 report](docs/P5-SUBMISSION-REPORT.md)
+- **Local startup:** 94 unique focused OOMP passes; separate TRACE startup,
+  authenticated configuration discovery and doctor evidence. Real browser login
+  and final model answers remain manual. [Startup report](docs/local-start-validation.md)
+
+These counts belong to their stated snapshots and overlap; they are not one
+current full-suite total. [Stage 9](docs/stage9-validation.md) remains a separate
+historical synthetic retrieval study. Independent label review, pilot users,
+public benchmark validation and comparable Mem0/Graphiti studies remain pending.
+
+## Security and practical limits
+
+- SQLite, local profiles and backups are plaintext; protect them with OS access
+  controls and disk encryption. Never commit databases/WAL/SHM files, credentials,
+  `.env`, private configuration, conversation exports or real chat fixtures.
+- Submission use is restricted to **one principal per dedicated namespace/profile**.
+  The default multi-principal shared-queue projection defect remains open.
+- `memory.context` applies principal-specific ownership. Legacy retrieval and
+  `memory.get_source` retain their documented tenant/namespace read boundary;
+  isolate mutually untrusted hosts with separate scopes and credentials.
+- Rules and sensitive-data heuristics have limited coverage. Optional local-model
+  proposals require explicit configuration and independent validation; provider
+  failure retains deterministic fallback. OOMP downloads no model weights.
+- Similarity, summaries and association paths do not prove truth. Temporal
+  uncertainty, correction review and negative controls remain necessary.
+- Storage/retrieval work is bounded; vectors use exact scans rather than a
+  large-scale ANN service. Erasure does not securely wipe old pages or backups.
+- Loopback development validation does not certify public TLS/proxy hosting,
+  enterprise security, kernel stability or universal host compatibility.
+
+[Full limitations](docs/limitations.md) · [Security model](docs/security-model.md) · [Report a vulnerability](SECURITY.md)
+
+## Documentation
+
+| Start here | Go deeper |
+| --- | --- |
+| [Local two-terminal quickstart](LOCAL-LIVE-QUICKSTART.md) | [Product CLI](docs/product-cli.md) and [onboarding](docs/product-onboarding.md) |
+| [Synthetic manual walkthrough](docs/MANUAL-TESTING.md) | [Source/canonical memory model](docs/memory-model.md) and [extraction](docs/mind2-design.md) |
+| [Python/API guide](docs/api-reference.md) | [Object architecture](docs/object-memory-architecture.md) and [temporal graph](docs/temporal-graph.md) |
+| [Retrieval](docs/retrieval.md) | [Context architecture](docs/context-virtualization-architecture.md) and [Mind workers](docs/background-mind.md) |
+| [Submission readiness](docs/SUBMISSION-READINESS.md) | [Release checklist](docs/release-checklist.md) and [research methodology](docs/benchmark-methodology.md) |
+
+## Contribute
+
+Read [CONTRIBUTING](CONTRIBUTING.md), the [developer guide](docs/developer-guide.md)
+and [Code of Conduct](CODE_OF_CONDUCT.md). Use fictional data and fresh disposable
+paths for tests; keep real provider calls explicitly separate from offline work.
+Historical acceptance records and frozen fixtures must stay intact.
+
+OOMP is licensed under [Apache-2.0](LICENSE); see [NOTICE](NOTICE) and
+[third-party notices](THIRD_PARTY_NOTICES.md). Package/release publication is a
+separate maintainer action, not implied by source availability or passing tests.
