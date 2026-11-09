@@ -153,7 +153,7 @@ def test_uncertain_or_degraded_components_never_report_start_success(tmp_path, m
     else:
         report["services"]["mind"]["last_error_code"] = "work_warning"
     monkeypatch.setattr(lifecycle, "control", lambda *args: report)
-    monkeypatch.setattr(lifecycle, "start", lambda *args, **kwargs: pytest.fail("unsafe launch"))
+    monkeypatch.setattr(lifecycle.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("unsafe launch"))
     monkeypatch.setattr(start, "probe_runtime", lambda *args: pytest.fail("unexpected success probe"))
     with pytest.raises(ProductError):
         start.launch(store, profile)

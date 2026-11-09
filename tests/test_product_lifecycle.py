@@ -154,6 +154,9 @@ def test_stale_pid_and_invalid_control_credential_never_authorize_a_signal(tmp_p
     assert control(store, "test")["state"] == "unverified"
     with pytest.raises(ProductError, match="ownership_unverified_no_process_signalled"):
         stop(store, "test")
+    # The unrelated live-PID record must not be overwritten by a new owner.
+    # Exercise valid authenticated control in a separate fresh profile.
+    store, profile = setup_profile(tmp_path / "authenticated", port=free_port())
     with owned_services(store, profile):
         runtime = read_json(store.directory("test")/"runtime.json")
         with socket.create_connection(("127.0.0.1", runtime["port"]), timeout=2) as connection:

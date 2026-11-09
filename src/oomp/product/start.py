@@ -167,8 +167,6 @@ def launch(store, profile, *, approve_trace=False, ui=None):
     if current.get("state") == "running" and current.get("ownership_verified"):
         result = current
     else:
-        if current.get("state") == "unverified":
-            raise ProductError("ownership_unverified_no_process_signalled")
         with prepare_environment(store, profile):
             result = lifecycle.start(store, profile, background=True)
     expected = {"mcp"} | ({"mind"} if profile.mind else set()) | ({"publication"} if profile.publication else set())
@@ -224,6 +222,9 @@ def command(args, ui):
         print(json.dumps(result))
     else:
         ui.welcome()
+        if result.get("stale_runtime_recovered"):
+            ui.line("WARN", "Previous OOMP supervisor exited without completing shutdown.")
+            ui.line("PASS", "Stale runtime safely recovered.")
         ui.line("PASS", "OOMP Running")
         for role, label in (("mcp", "MCP Server"), ("mind", "Mind Worker"), ("publication", "TRACE Publisher")):
             item = result["services"].get(role)
