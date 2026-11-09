@@ -5,9 +5,31 @@ from oomp.ingestion.canonicalization import canonicalize
 from oomp.ingestion.extraction import DeterministicExtractor, eligibility_reason
 from oomp.storage.memory_store import _memory_fingerprint
 from oomp.understanding.contracts import ExtractionConfiguration
-from oomp.understanding.rules import RulesExtractor, proposal_for
-from oomp.understanding.storage import candidate_writes
+from oomp.understanding.rules import RulesExtractor, proposal_for, classify, classify_legacy, blocked_reason, clauses
+from oomp.understanding.storage import candidate_writes, _new_node
 from oomp.understanding.validator import CandidateValidator
+
+
+def legacy_episode_entails_memory(scope, event, span, memory):
+    """Re-prove only an exact pre-correction generic P2 episode node.
+
+    Applicable source interpretations are frozen by classify_legacy(); neither
+    persisted fields nor caller-provided hints choose the interpretation.
+    """
+    config = ExtractionConfiguration(max_input_chars=16384, sensitive_episodes=True)
+    if (memory.metadata.get('canonicalization_version') != 'p2.1'
+            or memory.metadata.get('p2_episode') is not True
+            or blocked_reason(scope, event, config) is not None
+            or span not in clauses(event.content) or len(span.quote.split()) < 2):
+        return False
+    original = classify_legacy(event, span)
+    if (original == classify(event, span) or original['memory_category'] != 'episodic'
+            or original['predicate'] != 'stated'):
+        return False
+    candidate = proposal_for(scope, event, span, hints=original)
+    old_episode = _new_node(scope, event, candidate, episode=True)
+    return (_memory_fingerprint(old_episode) == _memory_fingerprint(memory)
+            and old_episode.canonical_key == memory.canonical_key)
 
 
 def source_entails_memory(scope, event, span, memory):
@@ -30,6 +52,12 @@ def source_entails_memory(scope, event, span, memory):
     for candidate in RulesExtractor(config).propose(scope, event):
         if candidate.source_spans == (span,) and matches(candidate_writes(scope, event, candidate, config)):
             return True
+    # The narrowly extended rules do not rewrite old generic episodes. Rebuild
+    # their complete original node from the source and frozen original grammar,
+    # requiring the exact fingerprint/key; never infer old semantics from the
+    # stored metadata itself. This fallback cannot create a typed alias/plan.
+    if legacy_episode_entails_memory(scope, event, span, memory):
+        return True
     if memory.metadata.get('canonicalization_version') == 'p2.1':
         try:
             proof_config = ExtractionConfiguration(mode='local-llm', model='source-proof',

@@ -7,14 +7,14 @@ from .contracts import ContextArgumentsFields, QueryPlan, RetrievalIntent
 
 PLANNER_VERSION = "context.plan.v1"
 _WORD = re.compile(r"[^\W_]+(?:[-'][^\W_]+)*", re.UNICODE)
-_STOP = frozenset("a an and are as at be been being by can could did do does during for from had has have how i in is it its me mention mentioned my name names of on or our please recall remember said say tell than that the their them then there these they this those to us was we were what when where which who why will with would you your earlier previously before again about discussing discuss discussion talked talking talk conversation conversations session sessions chat chats information know".split())
+_STOP = frozenset("a an and are as at be been being by can could did do does during for from had has have how i in is it its me mention mentioned my name names of on or our please recall remember said say tell than that the their them then there these they this those to us was we were what when where which who why will with would you your earlier previously before again about discussing discuss discussion talked talking talk conversation conversations session sessions chat chats information know recap summarize summarise repeat give explicitly".split())
 _VAGUE = frozenset("not something anything everything thing things decide decided decision decisions plan plans happened continue carry next now same last recent previous old first".split())
 _QUESTION_WORDS = frozenset("What Which Who When Where Why How Did Do Does Can Could Would Please Remember Tell Is Was Are Have".split())
 _TOPICS = (
-    ("relocation", re.compile(r"\b(?:mov(?:e|ed|ing)|relocat\w*|cit(?:y|ies)|infrastructure|destination)\b", re.I), "relocation moving cities infrastructure"),
-    ("projects", re.compile(r"\b(?:project\w*|robot\w*|build(?:ing)?)\b", re.I), "project named called build"),
-    ("preferences", re.compile(r"\b(?:prefer\w*|response style|answer style|technical explanations?)\b", re.I), "prefer preference response style"),
-    ("identity-claims", re.compile(r"\b(?:alias|display name|my (?:(?:earlier|previous|old|original) )?name|call me|called me)\b", re.I), "name alias called"),
+    ("relocation", re.compile(r"\b(?:mov(?:e|ed|ing)|relocat\w*|cit(?:y|ies)|infrastructure|destination)\b", re.I), "relocate plan moved relocation move moving cities infrastructure"),
+    ("projects", re.compile(r"\b(?:project\w*|robot\w*|build(?:ing)?)\b", re.I), "project robot prototype projects build building developing"),
+    ("preferences", re.compile(r"\b(?:prefer\w*|(?:response|answer|reply) style|technical explanations?|format\w*\s+(?:(?:my|your|the)\s+)?(?:replies|responses|answers)|(?:replies|responses|answers)\s+(?:to be\s+)?format\w*)\b", re.I), "reply replies preference prefer response answers concise style"),
+    ("identity-claims", re.compile(r"\b(?:alias|nickname|display name|my (?:(?:earlier|previous|old|original|legal|verified) )?name|call me|called me)\b", re.I), "alias nickname name call"),
     ("sensitive-discussion", re.compile(r"\b(?:politic\w*|prime minister|president|religio\w*)\b", re.I), "political politics discussion"),
 )
 
@@ -48,6 +48,23 @@ def _anchors(request):
     return result[:4]
 
 
+def bounded_query_terms(plan):
+    """Round-robin variants share the existing 32-token retrieval budget.
+
+    A long primary question cannot consume every expansion/anchor slot. The
+    strings are still literal data for the existing scoped FTS tokenizer.
+    """
+    variants = [re.findall(r'[^\W_]+', variant, re.UNICODE) for variant in plan.query_variants]
+    result = []
+    for index in range(max((len(words) for words in variants), default=0)):
+        for words in variants:
+            if index < len(words) and words[index].casefold() not in result:
+                result.append(words[index].casefold())
+                if len(result) == 32:
+                    return tuple(result)
+    return tuple(result)
+
+
 def _intent(request, text, anchors):
     if re.search(r"\b(?:only (?:in )?(?:this|the current) (?:chat|session)|(?:in|from|during) (?:this|the current) (?:chat|session)(?: only)?)\b", text):
         return RetrievalIntent.CURRENT_SESSION_ONLY
@@ -74,6 +91,10 @@ def plan_request(request: ContextArgumentsFields) -> QueryPlan:
     topics = _topics(text)
     intent = _intent(request, text, anchors)
     reasons = [PLANNER_VERSION]
+    if re.search(r"\b(?:verified|authenticated|legal)\s+(?:personal\s+)?(?:name|identity)\b", text):
+        return QueryPlan(retrieval_intent=RetrievalIntent.UNCERTAIN_RECALL,
+                         search_allowed=False, needs_clarification=True,
+                         reasons=(PLANNER_VERSION, "claimed_alias_not_verified_identity"))
     if intent is RetrievalIntent.CURRENT_SESSION_ONLY:
         return QueryPlan(retrieval_intent=intent, search_allowed=False,
                          reasons=(PLANNER_VERSION, "current_session_archive_search_disabled"))
@@ -98,13 +119,21 @@ def plan_request(request: ContextArgumentsFields) -> QueryPlan:
     primary = " ".join(terms) if terms else " ".join(anchors)
     if primary:
         variants.append(primary[:4096])
-    for topic in topics:
-        expansion = next(value for name, _, value in _TOPICS if name == topic)
-        candidate = " ".join(dict.fromkeys((*terms[:24], *expansion.split())))
-        if candidate and candidate not in variants:
-            variants.append(candidate[:4096])
-        if len(variants) == 3:
+    # Reserve expansion slots for every requested facet rather than stopping
+    # after the first two topics. This is one bounded lexical disjunction.
+    expansions = [next(value for name, _, value in _TOPICS if name == topic).split() for topic in topics]
+    expanded = []
+    for index in range(max((len(words) for words in expansions), default=0)):
+        for words in expansions:
+            if index < len(words) and words[index] not in expanded:
+                expanded.append(words[index])
+            if len(expanded) == 28:
+                break
+        if len(expanded) == 28:
             break
+    candidate = " ".join(expanded)
+    if candidate and candidate not in variants:
+        variants.append(candidate)
     if anchors and len(variants) < 3:
         candidate = " ".join(anchors)
         if candidate not in variants:
@@ -119,6 +148,10 @@ def plan_request(request: ContextArgumentsFields) -> QueryPlan:
         reasons.append("literal_topic_query_expansion")
     if anchors:
         reasons.append("exact_anchor_hint")
+    if anchors and 'identity-claims' in topics and re.match(r"\s*(?:is|was|are|were|does|did)\b", text):
+        reasons.append("anchored_identity_contrast")
+    if re.match(r"\s*(?:is|was|are|were|did|do|does|have|has|am)\b", text) and re.search(r"\band\b", text):
+        reasons.append("conjunctive_claim_query")
     return QueryPlan(retrieval_intent=intent, query_variants=tuple(variants[:3]),
                      anchors=tuple(anchors), focus_terms=tuple(terms),
                      topic_hints=tuple(topics), reasons=tuple(reasons))

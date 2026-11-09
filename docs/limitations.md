@@ -51,3 +51,26 @@ Only executed local results are claimed; a green remote CI matrix is pending a
 user push and actual workflow runs. See [current validation](stage10-validation.md)
 and [release gates](release-checklist.md). Do not deploy a public memory server
 or label this enterprise-ready without additional engineering and testing.
+
+# Submission operating restriction
+
+The submission profile uses a fresh dedicated database and exactly one principal
+per namespace. Managed profile grants all use that profile's single principal.
+Do not add other principals or share that namespace with an independently owned
+host: default shared-queue scheduling has a demonstrated principal-specific
+projection limitation and is not certified for general multi-principal use.
+The experimental explicit foreign-event enqueue is not a production fix.
+
+Legacy `memory.get_source` and legacy retrieval retain their documented shared
+tenant/namespace read boundary. `memory.context` enforces the stronger principal
+ownership policy. Distinct untrusted hosts must receive separate namespaces or
+tenants and separately provisioned credentials; shared display names do not map
+identities. This submission does not change legacy permissions.
+
+Local experimental acceptance and an alpha submission archive are not a public
+release or production certification. Current Gate B, packaging, platform coverage
+and remaining roadmap requirements are recorded in
+[submission readiness](SUBMISSION-READINESS.md) and
+[P4 final acceptance](P4-FINAL-ACCEPTANCE.md). Independent pilot users, public
+LongMemEval validation and controlled external Mem0/Graphiti comparisons remain
+pending unless those reports explicitly record executed evidence.

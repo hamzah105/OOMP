@@ -5,3 +5,4 @@ examples/fixtures/context_recall_v1.json text eol=lf
 benchmarks/context/fixtures/v1/*.json text eol=lf
 # Preserve the original measured artifact bytes and their recorded checksums.
 benchmarks/mind2/results/**/*.json -text
+tests/fixtures/p4_quality/v1/query-controls.json text eol=lf

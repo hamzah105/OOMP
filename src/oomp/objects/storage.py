@@ -127,7 +127,17 @@ class ObjectStorage(UnderstandingStore):
         if _valid_at(memory.valid_from,memory.valid_until,query.valid_at) is False:return None
         fields=classify(event,span)
         if fields['assertion_kind']!=row['assertion_kind']:
-            raise ObjectMapError("object_assertion_invalid")
+            # A corrected acquisition rule must not invalidate an exact old
+            # episode projection. Reconstruct its entire historic node from
+            # the original source before permitting its historic assertion;
+            # neither the proof row nor arbitrary p2.1 metadata is authority.
+            from oomp.context.validation import legacy_episode_entails_memory
+            from oomp.understanding.rules import classify_legacy
+            original=classify_legacy(event,span)
+            if (original['assertion_kind']!=row['assertion_kind']
+                    or not legacy_episode_entails_memory(scope,event,span,memory)):
+                raise ObjectMapError("object_assertion_invalid")
+            fields=original
         kind=ObjectType(obj['object_type'])
         if (kind is ObjectType.FACT and obj['reference_id']!=memory.memory_id or
                 kind is ObjectType.SOURCE_EVENT and obj['reference_id']!=event.event_id):

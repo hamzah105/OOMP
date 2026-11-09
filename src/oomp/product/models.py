@@ -29,6 +29,7 @@ class Profile(ContractModel):
     read_source: StrictBool = False
     provider: EmbeddingConfiguration | None = None
     extraction: ExtractionConfiguration | None = None
+    context_enabled: StrictBool | None = None
     secret_source: Literal["file", "environment"] = "file"
     owner_id: str | None = Field(default=None, min_length=1, max_length=128)
     host_origin: str = "http://127.0.0.1:8000"
@@ -73,9 +74,10 @@ class Profile(ContractModel):
     @property
     def identity(self):
         payload = self.model_dump(mode="json")
-        # Nullable additive field: genuine pre-P2 profile generation IDs survive.
-        if self.extraction is None:
-            payload.pop("extraction")
+        # Omitted nullable additions preserve existing profile generation IDs.
+        for field in ("extraction", "context_enabled"):
+            if getattr(self, field) is None:
+                payload.pop(field)
         return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
     @property
@@ -113,4 +115,4 @@ class Profile(ContractModel):
             port=self.port, allowed_origins=(self.host_origin,) if self.adapter == "trace" else (),
             http_grants=(read, *writers.values()) if self.transport == "streamable-http" else (),
             stdio_grant=(writers.get("user") or read) if self.transport == "stdio" else None,
-            embedding=self.provider)
+            embedding=self.provider, context_enabled=self.context_enabled is True)
