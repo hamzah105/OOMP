@@ -40,7 +40,7 @@ def run_role(store, profile, role):
                             auto_embed_on_extract=provider is not None,
                             extraction_configuration=profile.extraction)
         ready.set()
-        _emit("ready")
+        _emit("ready", stage="mind_work")
         while not stop.is_set():
             result = worker.run_once(max_jobs=4, dispatch_limit=16)
             if result.failed or result.lost_lease:
@@ -64,7 +64,7 @@ def run_role(store, profile, role):
                 if not thread.is_alive() or time.monotonic() >= deadline or stop.wait(.05):
                     raise ProductError("mcp_startup_failed")
             ready.set()
-            _emit("ready")
+            _emit("ready", stage="mcp")
             while thread.is_alive() and not stop.wait(.1):
                 pass
             if not stop.is_set():
@@ -89,8 +89,15 @@ def main(argv=None):
         return 0
     except KeyboardInterrupt:
         return 130
-    except BaseException:
-        _emit("service_failed")  # no arbitrary exception/config/source text
+    except BaseException as error:
+        reason, stage = "unknown_error", "mind_work" if args.role == "mind" else "mcp"
+        if isinstance(error, ImportError):
+            reason = "dependency_missing"
+        elif isinstance(error, ProductError) and error.code == "storage_not_ready":
+            reason, stage = "storage_unavailable", "storage"
+        elif isinstance(error, ProductError) and error.code in {"mcp_startup_failed", "mcp_exited"}:
+            reason = "protocol_failed"
+        _emit("service_failed", stage=stage, reason=reason)
         return 1
 
 

@@ -15,6 +15,14 @@ import threading
 import types
 
 
+class PublicationFailure(Exception):
+    """Static diagnostics only; never retain an exception's message as output."""
+    def __init__(self, stage, reason):
+        self.stage, self.reason = stage, reason
+        self.reported = False
+        super().__init__(reason)
+
+
 def run(project, mongo_reference, database, stop, emit):
     sys.path.insert(0, str(Path(project)))
     # Publisher imports get_database even though its instance accepts a DB. Bind
@@ -28,37 +36,96 @@ def run(project, mongo_reference, database, stop, emit):
     sys.modules[facade.__name__] = facade
     # Explicit local Mongo reference/database; no backend.database import, .env
     # loading, default production database selection, or automatic legacy backfill.
+    stage = "imports"
     try:
         from backend.services.oomp_config import get_configuration
         from backend.services.oomp_publisher import Publisher
         from backend.services.oomp_diagnostics import work
         from pymongo import MongoClient
+        from pymongo.errors import ConnectionFailure, PyMongoError
+        stage = "configuration"
         config = get_configuration()
         if config.mode != "retrieve_and_ingest":
             raise ValueError("publication policy required")
+        stage = "mongo_connect"
         client = MongoClient(os.environ[mongo_reference], serverSelectionTimeoutMS=2000,
                              connectTimeoutMS=2000, socketTimeoutMS=3000, timeoutMS=5000,
                              directConnection=True, connect=False)
         client.admin.command("ping")
-        publisher = Publisher(client[database], config)
+        class ObservedPublisher(Publisher):
+            def reconcile(self, **kwargs):
+                nonlocal stage
+                stage = "reconcile"
+                return super().reconcile(**kwargs)
+
+            def drain(self, **kwargs):
+                nonlocal stage
+                stage = "delivery"
+                return super().drain(**kwargs)
+
+        publisher = ObservedPublisher(client[database], config)
         emit("ready")
         def heartbeat():
             while not stop.wait(1):
                 emit("heartbeat")
         threading.Thread(target=heartbeat, daemon=True).start()
-        for report in work(publisher, limit=10, cycles=0, poll_seconds=1):
-            emit("work_complete")
-            if any(r in {"failed", "uncertain"} for r in report["delivery"]["results"]):
-                emit("work_warning")
-            if stop.is_set():
-                break
-    finally:
-        if client is not None:
-            client.close()
-        if previous is None:
-            sys.modules.pop(facade.__name__, None)
+        consecutive_failures = 0
+        while not stop.is_set():
+            try:
+                for report in work(publisher, limit=10, cycles=0, poll_seconds=1):
+                    consecutive_failures = 0
+                    emit("work_complete")
+                    if report.get("reconciliation", {}).get("invalid", 0):
+                        emit("work_warning", stage="reconcile", reason="publication_source_invalid")
+                    if any(r in {"failed", "uncertain"} for r in report["delivery"]["results"]):
+                        emit("work_warning", stage="delivery", reason="publication_delivery_uncertain")
+                    if stop.is_set():
+                        return
+            except ConnectionFailure:
+                # Reconciliation is conditional/idempotent and delivery retains
+                # TRACE's claim leases, fences and durable-receipt verification.
+                # Never reset an event state, revive failed work or bypass a lease.
+                consecutive_failures += 1
+                if consecutive_failures >= 3:
+                    raise
+                emit("work_warning", stage=stage, reason="mongo_connection_failed",
+                     retry_attempt=consecutive_failures)
+                if stop.wait(.5 * 2**(consecutive_failures-1)):
+                    return
+    except BaseException as error:
+        if isinstance(error, ImportError):
+            reason = "dependency_missing"
+        elif isinstance(error, KeyboardInterrupt):
+            reason = "cancelled"
+        elif "ConnectionFailure" in locals() and isinstance(error, ConnectionFailure):
+            reason = "mongo_connection_failed"
+        elif "PyMongoError" in locals() and isinstance(error, PyMongoError):
+            reason = "mongo_operation_failed"
+        elif stage == "configuration" and isinstance(error, (ValueError, KeyError, TypeError)):
+            reason = "configuration_invalid"
+        elif getattr(error, "code", None) == "invalid_source":
+            reason = "publication_source_invalid"
         else:
-            sys.modules[facade.__name__] = previous
+            reason = "unknown_error"
+        failure = PublicationFailure(stage, reason)
+        # Report before Mongo cleanup: a blocked close must not conceal the
+        # first fault behind a later supervisor heartbeat/progress timeout.
+        emit("service_failed", stage=stage, reason=reason)
+        failure.reported = True
+        raise failure from None
+    finally:
+        pending_failure = sys.exception()
+        try:
+            if client is not None:
+                client.close()
+        except BaseException:
+            if pending_failure is None:
+                raise PublicationFailure("shutdown", "unknown_error") from None
+        finally:
+            if previous is None:
+                sys.modules.pop(facade.__name__, None)
+            else:
+                sys.modules[facade.__name__] = previous
 
 
 def main():
@@ -73,13 +140,19 @@ def main():
         sys.stdin.buffer.readline(32)
         stop.set()
     threading.Thread(target=control, daemon=True).start()
-    def emit(code):
-        print(json.dumps({"code": code}), flush=True)
+    output_lock = threading.Lock()
+    def emit(code, **fields):
+        with output_lock:
+            print(json.dumps({"code": code, **fields}), flush=True)
     try:
         run(args.project, args.mongo_reference, args.database, stop, emit)
         return 0
+    except PublicationFailure as error:
+        if not error.reported:
+            emit("service_failed", stage=error.stage, reason=error.reason)
+        return 1
     except BaseException:
-        emit("service_failed")
+        emit("service_failed", stage="startup", reason="unknown_error")
         return 1
 
 

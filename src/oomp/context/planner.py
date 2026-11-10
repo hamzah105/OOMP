@@ -10,6 +10,9 @@ _WORD = re.compile(r"[^\W_]+(?:[-'][^\W_]+)*", re.UNICODE)
 _STOP = frozenset("a an and are as at be been being by can could did do does during for from had has have how i in is it its me mention mentioned my name names of on or our please recall remember said say tell than that the their them then there these they this those to us was we were what when where which who why will with would you your earlier previously before again about discussing discuss discussion talked talking talk conversation conversations session sessions chat chats information know recap summarize summarise repeat give explicitly".split())
 _VAGUE = frozenset("not something anything everything thing things decide decided decision decisions plan plans happened continue carry next now same last recent previous old first".split())
 _QUESTION_WORDS = frozenset("What Which Who When Where Why How Did Do Does Can Could Would Please Remember Tell Is Was Are Have".split())
+_EXPLANATION_STYLE_QUERY = re.compile(
+    r"\bhow\s+(?:do|should|would|can)\s+you\s+(?:explain|teach|present|describe)\s+"
+    r"(?:technical\s+)?(?:topics?|concepts?)\s+to\s+me\b", re.I)
 _TOPICS = (
     ("relocation", re.compile(r"\b(?:mov(?:e|ed|ing)|relocat\w*|cit(?:y|ies)|infrastructure|destination)\b", re.I), "relocate plan moved relocation move moving cities infrastructure"),
     ("projects", re.compile(r"\b(?:project\w*|robot\w*|build(?:ing)?)\b", re.I), "project robot prototype projects build building developing"),
@@ -31,7 +34,10 @@ def _terms(text):
 
 
 def _topics(text):
-    return [name for name, pattern, _ in _TOPICS if pattern.search(text)]
+    result = [name for name, pattern, _ in _TOPICS if pattern.search(text)]
+    if _EXPLANATION_STYLE_QUERY.search(text) and "preferences" not in result:
+        result.append("preferences")
+    return result
 
 
 def _anchors(request):

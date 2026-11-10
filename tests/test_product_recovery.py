@@ -402,10 +402,10 @@ def test_initial_supervisor_log_failure_closes_control_socket_and_releases_os_lo
     store, profile = synthetic_profile(tmp_path)
     supervisor = lifecycle.Supervisor(store, profile)
     original = supervisor.log
-    def fail_initial_log(code, role=None):
+    def fail_initial_log(code, role=None, **fields):
         if code == "supervisor_start":
             raise OSError("synthetic logging failure")
-        return original(code, role)
+        return original(code, role, **fields)
     monkeypatch.setattr(supervisor, "log", fail_initial_log)
     monkeypatch.setattr(supervisor, "spawn", lambda *_: pytest.fail("service started after initial logging failure"))
     assert supervisor.run(background=True) == 1

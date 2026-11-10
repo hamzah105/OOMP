@@ -87,6 +87,38 @@ def source_ids(path, result, events):
     return identifiers
 
 
+@pytest.mark.parametrize("query", [
+    "How should you explain technical topics to me?",
+    "How do you teach concepts to me?",
+    "How would you present technical concepts to me?",
+])
+def test_explanation_style_paraphrases_admit_only_preference_sources(query):
+    plan = plan_request(request(query))
+    assert "preferences" in plan.topic_hints
+    assert _relevant("I prefer concise technical explanations.", plan)
+    assert not _relevant("I am developing a project called Cedar.", plan)
+    assert len(bounded_query_terms(plan)) <= 32
+
+
+@pytest.mark.parametrize("query", [
+    "Explain TCP congestion control.",
+    "Where should I put my technical notebook?",
+    "How should a robot explain technical topics to others?",
+])
+def test_ordinary_technical_questions_do_not_activate_personal_explanation_recall(query):
+    assert "preferences" not in plan_request(request(query)).topic_hints
+
+
+def test_natural_explanation_question_returns_exact_grounded_preference(tmp_path):
+    path = tmp_path/"style.sqlite3"
+    events = build(path, ({"id":"style", "text":"I prefer concise technical explanations."},
+                         {"id":"project", "text":"I am developing a project called Cedar."}))
+    query = ContextRequest.model_validate({**request("How should you explain technical topics to me?").model_dump(),
+                                           "token_budget":1200})
+    result = ContextEngine(path).retrieve(OWNER, query)
+    assert source_ids(path, result, events) == {"style"}
+
+
 def test_independent_controls_keep_their_registered_bytes_and_expected_sources():
     assert hashlib.sha256(CONTROL_PATH.read_bytes()).hexdigest() == CONTROL_SHA256
     checksum = CONTROL_PATH.with_suffix(".sha256").read_text(encoding="ascii").split()[0]

@@ -212,9 +212,6 @@ def file_lock(path: Path):
     locked = False
     try:
         restrict(path)
-        if path.stat().st_size == 0:
-            handle.write(b"0")
-            handle.flush()
         handle.seek(0)
         try:
             if os.name == "nt":
@@ -226,6 +223,12 @@ def file_lock(path: Path):
             locked = True
         except OSError:
             raise ProductError("profile_busy") from None
+        # Windows supports byte-range locks beyond EOF. Initialize only after
+        # owning the range: another starter may already have locked an empty
+        # file, making a pre-lock write/flush fail with PermissionError.
+        if os.fstat(handle.fileno()).st_size == 0:
+            handle.write(b"0")
+            handle.flush()
         yield
     finally:
         if locked:
