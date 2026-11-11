@@ -59,6 +59,36 @@ authenticates and stops only the selected managed supervisor and its children.
 It preserves the profile, data, credentials and one-time connection configuration.
 `oomp up`, `down`, explicit profile options and existing diagnostics remain available.
 
+### Start again after a recoverable supervisor exit
+
+Use the same command; do not delete or rename runtime files manually:
+
+```powershell
+oomp start
+```
+
+An authenticated running supervisor is reused. For an orphaned unfinalized runtime
+record, automatic recovery requires a definitely dead supervisor PID, free
+recorded control and configured MCP ports, the real free OS operation lock, an
+unchanged valid private record/profile and serialized launch ownership. An alive
+or reused PID, inconclusive liveness, a held lock, occupied port, changed record or
+unsafe permissions blocks recovery without signalling an unverified process.
+
+The original record is retained privately under the profile's
+`history/recovery-*/runtime.json`. It includes an old control token; do not print,
+share or commit it. Existing memories, WAL/SHM files, credentials, owner, scope,
+grants and the approved TRACE handoff are preserved. Normal service authentication,
+MCP, configured Context V1 and database readiness must pass before the CLI prints
+recovery/startup success. These rules describe the product behavior, not a new
+test against an existing live profile.
+
+If another start is in progress (`profile_busy`), let it finish before retrying.
+For other refusal codes, retain the private evidence and use the
+[recovery code reference](docs/product-cli.md#automatic-stale-supervisor-recovery).
+Do not kill a PID or bypass a changed-state warning. Pipe EOF requests orphan
+child shutdown; an in-flight Mind job may drain before its worker exits, governed
+by the existing leases/fencing. Recovery does not force-stop those processes.
+
 If no setup exists, `oomp start` opens a guided wizard in an interactive terminal.
 It detects the selected project/Python, prompts for a missing owner ID, validates
 only that ID against the selected users collection, presents read-only or approved
@@ -66,6 +96,11 @@ publication authority, and requests approval before creating files or credential
 It never chooses a different user, rebinds an existing profile or rotates secrets.
 
 ## Troubleshooting and boundaries
+
+A PSReadLine `System.Console.SetCursorPosition` exception belongs to PowerShell's
+console editor. It does not establish that OOMP or Windows crashed. The recovery
+patch changes no global PowerShell settings, Windows services, drivers or security
+policy, and does not establish why a previous supervisor exited.
 
 An `on_startup` Router error indicates an incompatible/mixed web stack. The
 measured compatible TRACE environment is FastAPI0.115.0, Starlette0.38.6,

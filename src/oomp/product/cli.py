@@ -399,6 +399,22 @@ def command(args):
     except Exception as error:
         code = error.code if isinstance(error, ProductError) else "invalid_configuration_or_operation"
         recommendation = "Review --help, run onboard --dry-run or doctor --full; existing databases/credentials are not repaired or rotated."
+        if args.command in {"start", "up", "restart"}:
+            recovery_guidance = {
+                "profile_busy": "Another profile operation holds its OS lock. Wait for it to finish, then retry oomp start.",
+                "stale_supervisor_alive_or_pid_reused": "Owner exit is unproven. Inspect status/logs; preserve runtime files and do not signal a recorded PID.",
+                "stale_process_liveness_unavailable": "Process ownership is ambiguous. Preserve runtime files for owner review; do not signal a recorded PID.",
+                "stale_control_port_in_use": "The control port remains occupied. Preserve state; wait for verified service shutdown, then retry oomp start.",
+                "port_in_use_no_process_changed": "The MCP port remains occupied. Preserve state; wait for verified service shutdown or review the selected port.",
+                "runtime_state_changed_retry": "Runtime state changed. Preserve files; inspect status/logs and retry after other profile operations finish.",
+                "configuration_changed_retry": "Profile configuration changed. Check the selected profile and retry after other operations finish.",
+                "invalid_runtime_state": "Preserve the invalid runtime record for owner review; do not delete it or signal a recorded PID.",
+                "stale_runtime_unreadable": "Preserve runtime state and request an owner-reviewed filesystem/permissions inspection.",
+                "stale_runtime_archive_failed": "Private runtime archival failed. Preserve state and request an owner-reviewed filesystem/permissions inspection.",
+                "private_permissions_required": "Private permissions are unsafe. Preserve state and request owner review; do not delete runtime records.",
+                "private_permissions_failed": "Private evidence could not be protected. Preserve state and request an owner-reviewed permissions inspection.",
+            }
+            recommendation = recovery_guidance.get(code, recommendation)
         if args.command == "connect":
             print("FAIL "+code+". "+recommendation, file=sys.stderr)
         elif args.json:

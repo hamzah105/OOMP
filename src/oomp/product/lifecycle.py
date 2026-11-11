@@ -6,6 +6,7 @@ stale state or PID reuse never authorizes a signal to an unrelated process.
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import json
 import os
@@ -22,7 +23,8 @@ from urllib.parse import urlsplit
 
 from .discovery import project_fingerprint
 from .profiles import ProfileStore
-from .safety import ProductError, file_lock, private_directory, read_json, restrict, safe_path, write_json
+from .safety import (ProductError, file_lock, private_directory, private_permissions,
+                     read_json, restrict, safe_path, write_json)
 
 _CODES = {"ready", "heartbeat", "work_warning", "work_complete", "service_failed"}
 
@@ -73,13 +75,24 @@ def control(store, name, operation="status"):
     path = store.directory(name) / "runtime.json"
     if not path.exists():
         return {"profile": name, "state": "stopped", "ownership_verified": False, "services": {}}
-    state = read_json(path)
+    try:
+        state = read_json(path)
+    except FileNotFoundError:
+        return {"profile": name, "state": "stopped", "ownership_verified": False, "services": {}}
+    except (ValueError, UnicodeError) as error:
+        if isinstance(error, ProductError):
+            raise
+        raise ProductError("invalid_runtime_state") from None
+    if not isinstance(state, dict):
+        raise ProductError("invalid_runtime_state")
     if state.get("stopped") is True:
         return {"profile": name, "state": "failed" if state.get("failed") else "stopped",
                 "ownership_verified": False, "services": {}, "last_error_code": state.get("last_error_code")}
     if (type(state.get("port")) is not int or not 1024 <= state["port"] <= 65535
-            or not re.fullmatch(r"[A-Za-z0-9_-]{43}", state.get("token", ""))
-            or not re.fullmatch(r"[a-f0-9]{32}", state.get("run_id", ""))):
+            or not isinstance(state.get("token"), str)
+            or not re.fullmatch(r"[A-Za-z0-9_-]{43}", state["token"])
+            or not isinstance(state.get("run_id"), str)
+            or not re.fullmatch(r"[a-f0-9]{32}", state["run_id"])):
         raise ProductError("invalid_runtime_state")
     try:
         with socket.create_connection(("127.0.0.1", state["port"]), timeout=2) as connection:
@@ -94,9 +107,158 @@ def control(store, name, operation="status"):
         if result.pop("run_id", None) != state["run_id"] or result.get("profile") != name:
             raise ValueError()
         return result
-    except (OSError, ValueError, KeyError):
+    except (OSError, ValueError, KeyError, TypeError, AttributeError):
         return {"profile": name, "state": "unverified", "ownership_verified": False,
                 "services": {}, "last_error_code": "stale_state_or_supervisor_unavailable"}
+
+
+@contextmanager
+def _checked_lock(path):
+    # file_lock creates private new files, but deliberately restricts existing
+    # ones. Recovery must reject unsafe existing permissions rather than repair
+    # evidence before deciding whether it is safe to retire it.
+    path = safe_path(path)
+    private_directory(path.parent)
+    if path.exists() and not private_permissions(path):
+        raise ProductError("private_permissions_required")
+    with file_lock(path):
+        yield
+
+
+def _process_gone(pid):
+    """Definite exit only; never request termination rights or send a signal.
+
+    POSIX signal zero is only a presence/permission probe. It must never be
+    used on Windows, where os.kill has different termination semantics.
+    """
+    if os.name == "nt":
+        import ctypes as c
+        from ctypes import wintypes as w
+        api = c.WinDLL("kernel32", use_last_error=True)
+        api.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
+        api.OpenProcess.restype = w.HANDLE
+        api.WaitForSingleObject.argtypes = [w.HANDLE, w.DWORD]
+        api.WaitForSingleObject.restype = w.DWORD
+        api.CloseHandle.argtypes = [w.HANDLE]
+        handle = api.OpenProcess(0x100000, False, pid)  # SYNCHRONIZE only
+        if not handle:
+            if c.get_last_error() == 87:  # positive PID no longer exists
+                return True
+            raise ProductError("stale_process_liveness_unavailable")
+        try:
+            result = api.WaitForSingleObject(handle, 0)
+            if result in (0, 258):  # signalled exit / WAIT_TIMEOUT (still alive)
+                return result == 0
+            raise ProductError("stale_process_liveness_unavailable")
+        finally:
+            api.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return True
+    except (OSError, OverflowError):
+        raise ProductError("stale_process_liveness_unavailable") from None
+    return False
+
+
+def _runtime_snapshot(path, profile, *, allow_stopped=False):
+    path = safe_path(path)
+    try:
+        before = path.stat()
+        state = read_json(path)
+        with path.open("rb") as handle:
+            raw = handle.read(65537)
+        after = path.stat()
+        identity = lambda info: (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+        if identity(before) != identity(after):
+            raise ProductError("runtime_state_changed_retry")
+        if len(raw) > 65536 or json.loads(raw) != state:
+            raise ProductError("runtime_state_changed_retry")
+        required = {"pid", "port", "token", "run_id", "configuration", "stopped"}
+        if (not isinstance(state, dict) or not required <= set(state)
+                or set(state) - required - {"failed", "last_error_code"}
+                or type(state.get("pid")) is not int or not 0 < state["pid"] <= 0xFFFFFFFF
+                or type(state.get("port")) is not int or not 1024 <= state["port"] <= 65535
+                or not isinstance(state.get("token"), str)
+                or not re.fullmatch(r"[A-Za-z0-9_-]{43}", state["token"])
+                or not isinstance(state.get("run_id"), str)
+                or not re.fullmatch(r"[a-f0-9]{32}", state["run_id"])
+                or not isinstance(state.get("configuration"), str)
+                or not re.fullmatch(r"[a-f0-9]{64}", state["configuration"])
+                or type(state.get("stopped")) is not bool
+                or state["stopped"] and not allow_stopped
+                or not state["stopped"] and state["configuration"] != profile.identity
+                or "failed" in state and type(state["failed"]) is not bool
+                or state.get("last_error_code") is not None and (
+                    not isinstance(state["last_error_code"], str)
+                    or not re.fullmatch(r"[a-z0-9_]{1,128}", state["last_error_code"]))):
+            raise ProductError("invalid_runtime_state")
+        if not private_permissions(path):
+            raise ProductError("private_permissions_required")
+        return state, (identity(after), raw)
+    except FileNotFoundError:
+        raise ProductError("runtime_state_changed_retry") from None
+    except (ValueError, UnicodeError) as error:
+        if isinstance(error, ProductError):
+            raise
+        raise ProductError("invalid_runtime_state") from None
+    except OSError:
+        raise ProductError("stale_runtime_unreadable") from None
+
+
+def _stale_evidence(store, profile, snapshot):
+    path = store.directory(profile.name) / "runtime.json"
+    if _runtime_snapshot(path, profile) != snapshot:
+        raise ProductError("runtime_state_changed_retry")
+    if store.load(profile.name) != profile:
+        raise ProductError("configuration_changed_retry")
+    if not _process_gone(snapshot[0]["pid"]):
+        # Includes PID reuse. A live PID is never an automatic recovery grant.
+        raise ProductError("stale_supervisor_alive_or_pid_reused")
+    if not port_available(snapshot[0]["port"]):
+        raise ProductError("stale_control_port_in_use")
+    if profile.transport == "streamable-http" and not port_available(profile.port):
+        raise ProductError("port_in_use_no_process_changed")
+    if control(store, profile.name)["state"] != "unverified":
+        raise ProductError("runtime_state_changed_retry")
+    # Probes can take time. A different unverified record is still a race, not
+    # permission to archive the replacement. All compliant writers also hold
+    # operation.lock; recheck the bytes and filesystem identity at retirement.
+    if _runtime_snapshot(path, profile) != snapshot:
+        raise ProductError("runtime_state_changed_retry")
+
+
+def _archive_stale(store, profile, snapshot):
+    """Atomic retirement under both locks; tokens never leave private storage."""
+    directory = store.directory(profile.name)
+    try:
+        history = private_directory(directory / "history")
+        target = history / ("recovery-" + secrets.token_hex(12))
+        # Exclusive directory creation: never overwrite a previous receipt.
+        target.mkdir(mode=0o700)
+        restrict(target)
+        private_directory(target)
+        _stale_evidence(store, profile, snapshot)
+        os.replace(safe_path(directory / "runtime.json"), safe_path(target / "runtime.json"))
+    except OSError:
+        raise ProductError("stale_runtime_archive_failed") from None
+
+
+def _recover_stale_locked(store, profile):
+    snapshot = _runtime_snapshot(store.directory(profile.name) / "runtime.json", profile)
+    with _checked_lock(store.directory(profile.name) / "operation.lock"):
+        _stale_evidence(store, profile, snapshot)
+        _archive_stale(store, profile, snapshot)
+    return True
+
+
+def recover_stale(store, profile):
+    """Retire only proven dead state. This does not start or change a profile."""
+    with _checked_lock(store.directory(profile.name) / "launch.lock"):
+        current = control(store, profile.name)
+        if current["state"] != "unverified":
+            return False
+        return _recover_stale_locked(store, profile)
 
 
 def stop(store, name):
@@ -280,6 +442,13 @@ class Supervisor:
     def run(self, *, background=False):
         profile = self.profile
         with file_lock(self.directory / "operation.lock"):
+            # Even direct/internal launches may not overwrite an unretired
+            # active record. Only the locked launcher can prove/retire it.
+            runtime = self.directory / "runtime.json"
+            if runtime.exists():
+                previous, _ = _runtime_snapshot(runtime, profile, allow_stopped=True)
+                if previous["stopped"] is not True:
+                    raise ProductError("ownership_unverified_no_process_signalled")
             if profile != self.store.load(profile.name):
                 raise ProductError("configuration_changed_retry")
             self.store.environment(profile)
@@ -333,9 +502,11 @@ class Supervisor:
             thread.start()
             state = {"run_id": self.run_id, "token": self.token, "port": control_server.server_address[1],
                      "pid": os.getpid(), "configuration": profile.identity, "stopped": False}
-            write_json(self.directory / "runtime.json", state)
-            self.log("supervisor_start")
+            recorded = False
             try:
+                write_json(self.directory / "runtime.json", state)
+                recorded = True
+                self.log("supervisor_start")
                 if profile.transport == "streamable-http":
                     self.spawn("mcp")
                     self.wait_ready("mcp")
@@ -368,13 +539,18 @@ class Supervisor:
                 self.log("startup_failed")
             finally:
                 self.state = "stopping"
-                self.close_children()
-                self.state = "failed" if self.failed else "stopped"
-                control_server.shutdown()
-                control_server.server_close()
-                thread.join(2)
-                write_json(self.directory / "runtime.json", {**state, "stopped": True, "failed": self.failed,
-                                                           "last_error_code": self.last_error})
+                try:
+                    self.close_children()
+                finally:
+                    self.state = "failed" if self.failed else "stopped"
+                    control_server.shutdown()
+                    control_server.server_close()
+                    thread.join(2)
+                if recorded:
+                    if read_json(runtime) != state:
+                        raise ProductError("runtime_state_changed_retry")
+                    write_json(runtime, {**state, "stopped": True, "failed": self.failed,
+                                         "last_error_code": self.last_error})
                 self.log("supervisor_stop")
             return 1 if self.failed else 0
 
@@ -386,49 +562,78 @@ def validate_publication(profile):
         raise ProductError("approved_host_code_changed_or_unavailable")
 
 
-def start(store, profile, *, background=False):
+def _start_background(store, profile):
+    # Caller holds launch.lock, never operation.lock: the child needs that lock.
     if profile.publication:
         validate_publication(profile)
         publication_uri(profile)
-    current = control(store, profile.name)
-    if current.get("ownership_verified"):
-        if current["state"] == "running":
-            return current
-        raise ProductError("profile_busy")
-    if not background:
-        return Supervisor(store, profile).run()
     # Explicit background option only. Startup remains bounded and observed.
     environment = child_environment(store, profile)
     process = subprocess.Popen([sys.executable, "-I", "-m", "oomp.product.lifecycle",
-        "--profile", profile.name, "--home", str(store.home)], stdin=subprocess.DEVNULL,
+        "--profile", profile.name, "--home", str(store.home), "--expected-configuration", profile.identity], stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=store.directory(profile.name),
         env=environment, **process_options())
-    deadline = time.monotonic()+80
-    while time.monotonic() < deadline:
-        if process.poll() is not None:
-            raise ProductError("startup_failed_check_doctor_and_logs")
-        current = control(store, profile.name)
-        if current.get("ownership_verified") and current["state"] == "running":
-            return current
-        time.sleep(.1)
-    # This is the launcher-owned supervisor handle, not a state-file PID.
     try:
-        stop(store, profile.name)
-    finally:
+        deadline = time.monotonic()+80
+        while time.monotonic() < deadline:
+            if process.poll() is not None:
+                if store.load(profile.name) != profile:
+                    raise ProductError("configuration_changed_retry")
+                raise ProductError("startup_failed_check_doctor_and_logs")
+            current = control(store, profile.name)
+            if current.get("ownership_verified") and current["state"] == "running":
+                return current
+            time.sleep(.1)
+        raise ProductError("startup_timeout")
+    except BaseException:
+        # Cancellation, changed state and malformed replies must not leak this
+        # launcher's child. Do not re-read a mutable runtime file to choose a
+        # shutdown target: even an authenticated replacement may be unrelated.
         if process.poll() is None:
+            # Only the retained Popen handle authorizes termination. Its pipe
+            # EOF stops owned services; in-flight work retains lease/fencing.
             process.terminate()
-            process.wait(timeout=5)
-    raise ProductError("startup_timeout")
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+        raise
+
+
+def start(store, profile, *, background=False):
+    with _checked_lock(store.directory(profile.name) / "launch.lock"):
+        current = control(store, profile.name)
+        if current.get("ownership_verified"):
+            if current["state"] == "running":
+                return current
+            raise ProductError("profile_busy")
+        recovered = current["state"] == "unverified" and _recover_stale_locked(store, profile)
+        runtime = store.directory(profile.name) / "runtime.json"
+        if not recovered and runtime.exists():
+            _runtime_snapshot(runtime, profile, allow_stopped=True)
+        if background:
+            result = _start_background(store, profile)
+            if recovered:
+                result = {**result, "stale_runtime_recovered": True}
+            return result
+    # Foreground supervision retains operation.lock for its lifetime, but must
+    # not prevent other callers from checking an authenticated running owner.
+    return Supervisor(store, profile).run()
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--profile", required=True)
     parser.add_argument("--home", required=True)
+    parser.add_argument("--expected-configuration")
     args = parser.parse_args()
     try:
         store = ProfileStore(args.home)
-        return Supervisor(store, store.load(args.profile)).run(background=True)
+        profile = store.load(args.profile)
+        if args.expected_configuration is not None and args.expected_configuration != profile.identity:
+            raise ProductError("configuration_changed_retry")
+        return Supervisor(store, profile).run(background=True)
     except BaseException:
         return 1
 

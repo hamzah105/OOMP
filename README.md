@@ -106,6 +106,16 @@ setup requires the reviewed matching TRACE bootstrap, owner validation and file
 approval. It does not install arbitrary host code. See the
 [two-terminal guide](LOCAL-LIVE-QUICKSTART.md) and [operator guide](docs/product-onboarding.md).
 
+For a recoverable supervisor exit, run `oomp start` again. It reuses an
+authenticated running supervisor, or retires an unchanged private runtime record
+only after proving its PID is gone, its control and MCP ports are free, and the
+actual OS operation lock is available. Launches are serialized; uncertain
+ownership, reused/live PIDs, occupied ports, held locks or changed records fail
+closed. The original record remains in a private recovery archive; it contains a
+token and must not be shared. Recovery preserves the existing database,
+credentials, scope/grants and TRACE handoff, then requires normal authenticated
+readiness before reporting success. See [recovery details and limits](docs/product-cli.md#automatic-stale-supervisor-recovery).
+
 ## Architecture
 
 ```mermaid

@@ -12,6 +12,8 @@ commands/arguments remain supported. `oomp --version` remains 0.1.0. Bare
 | `config`, `reconfigure` | Inspect or atomically update port, worker, transport and optional existing-model settings |
 | `up` | Foreground supervisor; actual HTTP MCP authorization check followed by selected worker readiness |
 | `up --background` | Explicit background supervisor; bounded launch wait, not an OS service installation |
+| `start` | Reuse the approved saved selection, safely recover proven stale supervisor state, then verify selected managed services and MCP/database readiness |
+| `stop` | Stop only the approved saved profile's authenticated supervisor |
 | `status` | Authenticated ownership, retained child liveness, heartbeats/progress and safe last codes |
 | `logs` | Bounded safe operational events, no subprocess stderr, source text or secret values |
 | `down` | Authenticate the live supervisor and request graceful stop; no state-file PID signalling |
@@ -23,7 +25,8 @@ commands/arguments remain supported. `oomp --version` remains 0.1.0. Bare
 | `host --approve-host -- ARGV...` | Execute explicit trusted-operator argv with host credential references populated; never discovered commands |
 
 Product commands accept `--profile NAME`, `--home PATH` and `--plain`; machine
-output is available with `--json`. The default profile is `local`. Profile names
+output is available with `--json`. The legacy default profile is `local`;
+`start` and `stop` can use the separately approved saved selection. Profile names
 are 1–32 lowercase ASCII letters/digits/underscore/hyphen starting with a letter;
 Windows device names are refused. `--home` overrides `OOMP_PROFILE_HOME`, then
 the platform user configuration location. Paths may contain spaces/Unicode;
@@ -53,12 +56,12 @@ JSON describes the proposed operation; exit status determines whether a requeste
 apply succeeded. `connect` reserves stdout entirely for MCP even on failure.
 `up --json` requires `--background` so that stdout can contain a complete result.
 
-Lifecycle/configuration mutations are serialized with a held OS file lock. Stop
-the profile before reconfiguration/export/uninstall. A stale state file yields
-`unverified`, never permission to signal its recorded PID. Startup checks the
-port without evicting an independent service. Successful `down` waits for the
+Lifecycle/configuration mutations are serialized with held OS file locks. Stop
+the profile before reconfiguration/export/uninstall. A failed control connection
+yields `unverified`, never permission to signal its recorded PID. Startup checks
+ports without evicting an independent service. Successful `down` waits for the
 final stopped record and released lock. A crashed child stops its siblings;
-restart is explicit, without an unlimited restart loop.
+another operator-issued start is required, without an unlimited restart loop.
 
 Shutdown sends a message through each parent-owned stdin pipe. Parent death/EOF
 also requests child shutdown. After a seven-second shared grace period, only
@@ -68,6 +71,59 @@ lease/fencing/retry mechanisms, not process memory, govern recovery. A heartbeat
 alone does not prove work completion: progress age is exposed and non-MCP work
 stalled beyond 180 seconds fails supervision. Control is authenticated loopback
 IPC with eight concurrent request slots, two-second reads and bounded messages.
+
+## Automatic stale-supervisor recovery
+
+Run `oomp start` after a recoverable supervisor exit. An authenticated running
+supervisor is reused without restarting its services. An unavailable control
+socket alone is insufficient evidence for recovery. The launcher requires all
+of the following before retiring an unfinalized `runtime.json`:
+
+- A structurally valid, privately protected record bound to the unchanged
+  selected profile.
+- Definite supervisor exit from the OS process-liveness check. An alive or
+  reused PID and an inconclusive/access-denied check are refused.
+- Free recorded control and configured MCP ports, with no independent listener
+  displaced.
+- The actual exclusive `operation.lock`, not merely the existence of its file.
+  The runtime bytes/file identity, profile and ownership evidence are rechecked
+  under the lock.
+
+A separate `launch.lock` serializes recovery and background startup through
+authenticated readiness. Recovery releases `operation.lock` before launching the
+new supervisor, which acquires that lock normally. A concurrent caller can receive
+`profile_busy`; wait for that launch to finish and run `oomp start` again.
+
+The original record is atomically moved to a uniquely named private
+`history/recovery-*/runtime.json` beneath the profile directory. It contains the
+old control token: never print, upload or commit it. Existing archives are not
+overwritten. The retirement step changes no database/WAL/SHM files, credentials,
+owner or scope/grants, and does not recreate the TRACE handoff. Selected workers
+resume their normal work after startup. If archiving finishes but
+startup is interrupted, another `oomp start` uses the normal startup path and
+retains that archive.
+
+Archiving is not a startup success. The CLI reports recovery only after the new
+authenticated supervisor and the normal selected-service, MCP, Context V1 (when
+configured) and database checks pass. The following messages illustrate that
+successful path; they are not a validation result:
+
+```text
+WARN Previous OOMP supervisor exited without completing shutdown.
+PASS Stale runtime safely recovered.
+PASS OOMP Running
+```
+
+No PID from a runtime record authorizes termination. Parent pipe EOF requests
+child shutdown, but an orphan Mind worker can finish an in-flight job before it
+exits. Existing durable leases/fencing govern that work; recovery does not promise
+instant disappearance of every orphan worker or kill an unverified process.
+An occupied MCP port continues to block startup while its owner is present.
+
+A PSReadLine `System.Console.SetCursorPosition` exception is a separate
+PowerShell console-editor issue. It is not evidence of an OOMP supervisor crash
+or a Windows BSOD. This recovery feature changes no global PowerShell, Windows
+service, driver or security settings.
 
 ## Diagnostic output
 
@@ -119,6 +175,13 @@ diagnostic convenience, not a replacement for [WAL-safe backup](privacy-retentio
 | `profile_busy` | Stop the owning supervisor before a configuration/integration mutation |
 | `profile_path_too_long_use_shorter_home` | Choose a shorter private profile root; no database needs to be erased or reset |
 | `ownership_unverified_no_process_signalled` | Inspect logs/state and port; never kill a PID merely because a file names it |
+| `stale_supervisor_alive_or_pid_reused` | The recorded PID is alive; do not archive or kill it. Use authenticated status/stop if ownership can be verified |
+| `stale_process_liveness_unavailable` | OS evidence is inconclusive; retain the record and investigate process access/ownership |
+| `stale_control_port_in_use` | The recorded control port cannot be exclusively bound; wait for TCP shutdown or review ownership without evicting a process |
+| `invalid_runtime_state` | Keep the private record for owner review; do not reset the profile or expose its token |
+| `runtime_state_changed_retry` / `configuration_changed_retry` | State changed during validation; let the concurrent operation finish, then retry without renaming files manually |
+| `private_permissions_required` / `private_permissions_failed` | Private filesystem protection is unsafe or unavailable; recovery does not bypass it |
+| `stale_runtime_archive_failed` | Private retirement failed; inspect filesystem capacity/access without deleting runtime, database or credential files |
 | WARN pending/failed queue counts | Inspect existing `mind status/jobs`; acceptance is not extraction completion |
 | NOT TESTED WAL / snapshot bound | Use live status, or a consistent authorized offline backup; no private repair was attempted |
 | WARN provider unavailable/incompatible | Start the independently owned provider/model, or choose lexical-only; no weights are downloaded |
