@@ -22,11 +22,12 @@ import time
 from urllib.parse import urlsplit
 
 from .discovery import project_fingerprint
+from .child_status import CODES, checked_failure, checked_status, failure_detail
 from .profiles import ProfileStore
 from .safety import (ProductError, file_lock, private_directory, private_permissions,
                      read_json, restrict, safe_path, write_json)
 
-_CODES = {"ready", "heartbeat", "work_warning", "work_complete", "service_failed"}
+_CODES = CODES
 
 
 def child_environment(store, profile):
@@ -86,8 +87,14 @@ def control(store, name, operation="status"):
     if not isinstance(state, dict):
         raise ProductError("invalid_runtime_state")
     if state.get("stopped") is True:
-        return {"profile": name, "state": "failed" if state.get("failed") else "stopped",
+        result = {"profile": name, "state": "failed" if state.get("failed") else "stopped",
                 "ownership_verified": False, "services": {}, "last_error_code": state.get("last_error_code")}
+        if "failure" in state:
+            try:
+                result["failure"] = checked_failure(state["failure"])
+            except (ValueError, TypeError):
+                raise ProductError("invalid_runtime_state") from None
+        return result
     if (type(state.get("port")) is not int or not 1024 <= state["port"] <= 65535
             or not isinstance(state.get("token"), str)
             or not re.fullmatch(r"[A-Za-z0-9_-]{43}", state["token"])
@@ -176,7 +183,7 @@ def _runtime_snapshot(path, profile, *, allow_stopped=False):
             raise ProductError("runtime_state_changed_retry")
         required = {"pid", "port", "token", "run_id", "configuration", "stopped"}
         if (not isinstance(state, dict) or not required <= set(state)
-                or set(state) - required - {"failed", "last_error_code"}
+                or set(state) - required - {"failed", "last_error_code", "failure"}
                 or type(state.get("pid")) is not int or not 0 < state["pid"] <= 0xFFFFFFFF
                 or type(state.get("port")) is not int or not 1024 <= state["port"] <= 65535
                 or not isinstance(state.get("token"), str)
@@ -193,6 +200,8 @@ def _runtime_snapshot(path, profile, *, allow_stopped=False):
                     not isinstance(state["last_error_code"], str)
                     or not re.fullmatch(r"[a-z0-9_]{1,128}", state["last_error_code"]))):
             raise ProductError("invalid_runtime_state")
+        if "failure" in state:
+            checked_failure(state["failure"])
         if not private_permissions(path):
             raise ProductError("private_permissions_required")
         return state, (identity(after), raw)
@@ -301,7 +310,10 @@ def logs(store, name, limit=40):
         try:
             item = json.loads(raw)
             if item.get("code") in allowed and item.get("role") in {None, "mcp", "mind", "publication"}:
-                result.append({k: item[k] for k in ("at", "code", "role") if k in item})
+                row = {k: item[k] for k in ("at", "code", "role") if k in item}
+                if "failure" in item:
+                    row["failure"] = checked_failure(item["failure"])
+                result.append(row)
         except (ValueError, TypeError):
             continue
     return result[-limit:]
@@ -321,16 +333,21 @@ class Supervisor:
         self.state = "starting"
         self.failed = False
         self.last_error = None
+        self.failure = None
+        self.starting_role = "supervisor"
 
-    def log(self, code, role=None):
+    def log(self, code, role=None, *, failure=None):
         path = safe_path(self.directory / "operations.log")
         if path.exists() and path.stat().st_size >= 1048576:
             old = safe_path(self.directory / "operations.previous.log")
             os.replace(path, old)
         descriptor = os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o600)
         restrict(path)
+        entry = {"at": datetime.now(timezone.utc).isoformat(), "code": code, "role": role}
+        if failure is not None:
+            entry["failure"] = checked_failure(failure)
         with os.fdopen(descriptor, "a", encoding="utf-8") as handle:
-            handle.write(json.dumps({"at": datetime.now(timezone.utc).isoformat(), "code": code, "role": role})+"\n")
+            handle.write(json.dumps(entry)+"\n")
 
     def snapshot(self):
         with self.guard:
@@ -339,15 +356,39 @@ class Supervisor:
                 info = self.health.get(role, {})
                 age = time.monotonic()-info.get("heartbeat", time.monotonic())
                 progress_age = time.monotonic()-info.get("progress", time.monotonic())
-                alive = process.poll() is None
+                exit_code = process.poll()
+                alive = exit_code is None
                 services[role] = {"pid": process.pid, "alive": alive,
-                    "ready": bool(info.get("ready")) and alive and age < 12 and (role == "mcp" or progress_age < 180),
-                    "heartbeat_age_seconds": round(age, 2), "last_error_code": info.get("error")}
+                    "ready": bool(info.get("ready")) and not info.get("fatal") and alive and age < 12 and (role == "mcp" or progress_age < 180),
+                    "heartbeat_age_seconds": round(age, 2), "last_error_code": info.get("error"),
+                    "exit_code": exit_code, "stage": info.get("stage", "supervision"),
+                    "reason": info.get("reason")}
                 services[role]["progress_age_seconds"] = round(progress_age, 2)
         return {"profile": self.profile.name, "state": self.state, "ownership_verified": True,
                 "services": services, "last_error_code": self.last_error, "run_id": self.run_id,
                 "stdio": "host-owned; use oomp connect" if self.profile.transport == "stdio" else None,
-                "external_services": "host API, MongoDB and Ollama are independently owned"}
+                "external_services": "host API, MongoDB and Ollama are independently owned",
+                **({"failure": self.failure} if self.failure is not None else {})}
+
+    def first_failure(self, snapshot):
+        # A reported fatal error is decisive even if shutdown/foreign library
+        # threads keep the owned process alive. Heartbeats cannot erase it.
+        candidates = [(role, item) for role, item in snapshot["services"].items() if not item["ready"]]
+        candidates.sort(key=lambda pair: not self.health.get(pair[0], {}).get("fatal", False))
+        for role, item in candidates:
+            if self.health.get(role, {}).get("fatal"):
+                kind = "protocol_failure" if item["last_error_code"] == "invalid_child_status" else "child_reported_failure"
+                reason = item["reason"] or "unknown_error"
+            elif item["exit_code"] is not None:
+                kind, reason = "process_exit", "process_exited"
+            elif item["heartbeat_age_seconds"] >= 12:
+                kind, reason = "heartbeat_timeout", "heartbeat_timeout"
+            elif role != "mcp" and item["progress_age_seconds"] >= 180:
+                kind, reason = "progress_timeout", "progress_timeout"
+            else:
+                kind, reason = "child_not_ready", "child_not_ready"
+            return failure_detail(role, kind, item["stage"], reason, item["exit_code"])
+        return None
 
     def reader(self, role, process):
         while True:
@@ -357,32 +398,41 @@ class Supervisor:
             try:
                 if len(raw) > 4096:
                     raise ValueError()
-                value = json.loads(raw)
+                value = checked_status(json.loads(raw))
                 code = value.get("code")
                 if code not in _CODES:
                     raise ValueError()
                 with self.guard:
                     entry = self.health[role]
                     entry["heartbeat"] = time.monotonic()
+                    if "stage" in value:
+                        entry["stage"] = value["stage"]
                     if code == "ready":
                         entry["ready"] = True
                         entry["progress"] = time.monotonic()
                     if code == "work_complete":
                         entry["progress"] = time.monotonic()
-                        if not value.get("failed") and not value.get("lost_lease"):
+                        if not value.get("failed") and not value.get("lost_lease") and not entry.get("fatal"):
                             entry.pop("error", None)
+                            entry.pop("reason", None)
                     if code in {"service_failed", "work_warning"}:
                         entry["error"] = code
+                        entry["reason"] = value.get("reason", "unknown_error")
+                    if code == "service_failed":
+                        entry["fatal"] = True
+                        entry["ready"] = False
                 if code in {"service_failed", "work_warning"}:
-                    self.log(code, role)
+                    detail = failure_detail(role, "child_reported_failure" if code == "service_failed" else "work_warning", value.get("stage", "supervision"),
+                                            value.get("reason", "unknown_error"), process.poll())
+                    self.log(code, role, failure=detail)
             except (ValueError, TypeError, AttributeError):
                 with self.guard:
                     self.health[role]["error"] = "invalid_child_status"
-                self.failed = True
-                self.shutdown.set()
+                    self.health[role].update(fatal=True, ready=False, reason="invalid_child_status", stage="supervision")
                 return
 
     def spawn(self, role):
+        self.starting_role = role
         profile = self.profile
         environment = child_environment(self.store, profile)
         if role == "publication":
@@ -409,6 +459,8 @@ class Supervisor:
             if self.children[role].poll() is not None:
                 raise ProductError("child_startup_failed")
             with self.guard:
+                if self.health[role].get("fatal"):
+                    raise ProductError("child_startup_failed")
                 if self.health[role]["ready"]:
                     return
             time.sleep(.05)
@@ -526,17 +578,22 @@ class Supervisor:
                     print("PASS OOMP services ready. Ctrl+C stops owned services.", flush=True)
                 while not self.shutdown.wait(.2):
                     snapshot = self.snapshot()
-                    if any(not item["ready"] for item in snapshot["services"].values()):
+                    failure = self.first_failure(snapshot)
+                    if failure is not None:
                         self.failed = True
                         self.last_error = "owned_service_crashed_or_unresponsive"
-                        self.log("child_exit")
+                        self.failure = failure
+                        self.log("child_exit", failure["role"], failure=failure)
                         break
             except KeyboardInterrupt:
                 pass
             except Exception as error:
                 self.failed = True
                 self.last_error = error.code if isinstance(error, ProductError) else "startup_failed_check_doctor_and_logs"
-                self.log("startup_failed")
+                self.failure = self.first_failure(self.snapshot()) or failure_detail(
+                    self.starting_role, "startup_failure", "startup", "unknown_error")
+                self.log("startup_failed", self.starting_role if self.starting_role != "supervisor" else None,
+                         failure=self.failure)
             finally:
                 self.state = "stopping"
                 try:
@@ -549,8 +606,12 @@ class Supervisor:
                 if recorded:
                     if read_json(runtime) != state:
                         raise ProductError("runtime_state_changed_retry")
+                    if self.failure is not None and self.failure["role"] in self.children:
+                        self.failure = checked_failure({**self.failure,
+                            "exit_code": self.children[self.failure["role"]].poll()})
                     write_json(runtime, {**state, "stopped": True, "failed": self.failed,
-                                         "last_error_code": self.last_error})
+                                         "last_error_code": self.last_error,
+                                         **({"failure": self.failure} if self.failure is not None else {})})
                 self.log("supervisor_stop")
             return 1 if self.failed else 0
 
