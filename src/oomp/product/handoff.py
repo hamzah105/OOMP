@@ -116,7 +116,16 @@ def _payload(store, profile):
         raise ProductError("trace_file_profile_required")
     if store.load(profile.name) != profile:
         raise ProductError("profile_changed")
+    return _generation_payload(store, profile)
+
+
+def _generation_payload(store, profile):
+    """Sign a validated immutable generation, also before stopped activation."""
+    if profile.adapter != "trace" or profile.secret_source != "file":
+        raise ProductError("trace_file_profile_required")
     generation = store.generation(profile)
+    if read_json(generation/"profile.json") != profile.model_dump(mode="json"):
+        raise ProductError("profile_changed")
     for name in ("profile.json", "server.json", "writers.json"):
         read_json(generation/name)
     # References only. Authentication values stay in the existing private file.

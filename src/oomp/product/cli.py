@@ -14,7 +14,7 @@ from .safety import ProductError, safe_path
 from .ui import UI
 
 COMMANDS = {"onboard", "config", "reconfigure", "start", "stop", "up", "down", "restart", "status", "logs",
-            "install", "uninstall-integration", "connect", "host"}
+            "install", "uninstall-integration", "connect", "host", "approve-project", "rollback-approval"}
 
 
 def configure(subparsers, doctor):
@@ -38,11 +38,19 @@ def configure(subparsers, doctor):
             "uninstall-integration": "preview/remove only unchanged owned template files",
             "connect": "run a host-owned MCP stdio server using a stored profile",
             "host": "run an explicitly supplied host command with private profile environment",
+            "approve-project": "preview or explicitly refresh stopped TRACE host-code approval",
+            "rollback-approval": "restore a reviewed stopped approval metadata bundle",
         }[name])
         parser.add_argument("--profile", default=None if name in {"onboard", "start", "stop", "down", "status", "logs"} else "local")
         parser.add_argument("--home", help="profile root override; or OOMP_PROFILE_HOME")
         parser.add_argument("--plain", action="store_true")
         parser.add_argument("--json", action="store_true")
+        if name in {"approve-project", "rollback-approval"}:
+            parser.add_argument("--dry-run", action="store_true")
+            parser.add_argument("--yes", action="store_true")
+            parser.add_argument("--expected-plan", help="exact SHA-256 returned by the reviewed preview")
+            if name == "rollback-approval":
+                parser.add_argument("--transaction", required=True)
         if name == "start":
             parser.add_argument("--project", help="TRACE project for guided first-time setup")
             parser.add_argument("--remember", action="store_true", help="save this explicitly selected profile for subsequent bare commands")
@@ -305,6 +313,18 @@ def command(args):
             failed = isinstance(result, dict) and (result.get("state") in {"failed", "unverified"}
                 or result.get("state") == "running" and any(not s.get("ready") for s in result.get("services", {}).values()))
             return 1 if failed else 0
+        if args.command in {"approve-project", "rollback-approval"}:
+            from .approval import refresh, rollback
+            if args.yes and (args.dry_run or not args.expected_plan):
+                raise ProductError("approval_exact_plan_required")
+            if args.expected_plan and not args.yes:
+                raise ProductError("approval_explicit_confirmation_required")
+            expected = args.expected_plan if args.yes else None
+            result = (refresh(store, args.profile, expected_plan=expected)
+                if args.command == "approve-project" else
+                rollback(store, args.profile, args.transaction, expected_plan=expected))
+            print(json.dumps(result))
+            return 0
         profile = store.load(args.profile)
         if args.command in {"config", "reconfigure"}:
             changes = {key: getattr(args, key) for key in ("port", "mind", "transport", "context_enabled") if getattr(args, key) is not None}

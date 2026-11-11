@@ -59,3 +59,7 @@ Historical live logs identify publication as the first fatal reporter, but its
 original catch-all discarded the exception. Transient Mongo failure and malformed
 feedback have been reproduced synthetically; neither is claimed as the proven
 historical trigger. Future failures retain actionable bounded evidence.
+
+For an existing profile, the separate [stopped source-approval procedure](project-approval.md)
+provides exact-preview refresh and signed-journal rollback without credential
+rotation or database access. It does not start services or authorize pending work.
