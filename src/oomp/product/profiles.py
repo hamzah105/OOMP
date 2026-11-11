@@ -43,6 +43,8 @@ class ProfileStore:
         directory = self.directory(name)
         if not directory.exists():
             raise ProductError("profile_missing")
+        if safe_path(directory / "approval-pending.json").exists():
+            raise ProductError("approval_transaction_incomplete_use_rollback")
         active = read_json(directory / "active.json")
         identity = active.get("generation", "")
         if not re.fullmatch(r"[a-f0-9]{64}", identity):
