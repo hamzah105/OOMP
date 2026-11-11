@@ -134,6 +134,15 @@ def _sign(body, key):
     return {**body, "signature": hmac.new(key, _canonical(body), hashlib.sha256).hexdigest()}
 
 
+def _journal(path, body, key):
+    record = _sign(body, key)
+    # Every prepared journal must remain readable by the bounded recovery API,
+    # including the slightly longer committed/rolled_back state labels.
+    if len(_raw(record)) + 32 > 65536:
+        raise ProductError("approval_journal_too_large")
+    write_json(path, record)
+
+
 def _prepare(store, name):
     old = store.load(name)
     if old.adapter != "trace" or not old.publication or old.secret_source != "file":
@@ -201,7 +210,7 @@ def refresh(store, name, *, expected_plan=None):
                 "old_files": generation, "new_files": expected_generation, "state": "prepared",
                 "created_at": datetime.now(timezone.utc).isoformat()}
         key = _key(store, old)
-        write_json(history/"transaction.json", _sign(body, key))
+        _journal(history/"transaction.json", body, key)
         write_json(store.directory(name)/PENDING, {"transaction": transaction})
         _switch(store, new, paths, before, after)
         if (_snapshot(store.directory(name)/"secrets.json")["sha256"] != secrets_hash
@@ -209,7 +218,7 @@ def refresh(store, name, *, expected_plan=None):
                 or _generation(store, new.identity, name)[1] != expected_generation):
             raise ProductError("approval_preserved_input_changed")
         body["state"] = "committed"
-        write_json(history/"transaction.json", _sign(body, key))
+        _journal(history/"transaction.json", body, key)
         safe_path(store.directory(name)/PENDING).unlink()
         return {**plan, "applied": True, "transaction": transaction}
 
@@ -285,6 +294,6 @@ def rollback(store, name, transaction, *, expected_plan=None):
         write_json(pending, {"transaction": transaction})
         _switch(store, old, paths, current, body["before"])
         body["state"] = "rolled_back"
-        write_json(journal, _sign(body, key))
+        _journal(journal, body, key)
         safe_path(pending).unlink()
         return {**plan, "applied": True}

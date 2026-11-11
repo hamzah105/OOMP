@@ -226,3 +226,16 @@ def test_cli_requires_explicit_exact_plan_and_round_trips(pair, capsys):
     plan = json.loads(capsys.readouterr().out)
     assert main([*args, "--yes", "--expected-plan", plan["plan_sha256"]]) == 0
     assert json.loads(capsys.readouterr().out)["applied"]
+
+
+def test_oversized_bundle_is_rejected_before_any_activation(pair):
+    store, old, *_ = pair
+    client = store.generation(old)/"client.json"
+    data = read_json(client)
+    data["documentation"] = "x"*40000
+    write_json(client, data)
+    before = critical(store, old)
+    with pytest.raises(ProductError, match="approval_journal_too_large"):
+        approve(pair)
+    assert critical(store, old) == before
+    assert not (store.directory(old.name)/approval.PENDING).exists()
